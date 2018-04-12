@@ -116,47 +116,33 @@ SmartThingsPlatform.prototype = {
     accessories: function(callback) {
         this.log('Fetching Smart Things devices.');
 
+        /*
+            IMPORTANT Links:
+            https://developer.apple.com/documentation/homekit/hmaccessory
+            https://developer.apple.com/documentation/homekit/hmcharacteristic/characteristic_types
+            https://developer.apple.com/documentation/homekit/hmcharacteristic/characteristic_values
+            https://github.com/KhaosT/HAP-NodeJS/blob/master/lib/gen/HomeKitTypes.js
+
+        */
         var that = this;
         var foundAccessories = [];
         this.deviceLookup = [];
         this.unknownCapabilities = [];
         this.knownCapabilities = [
-            'Switch',
-            'Light',
-            'Color Control',
-            'Battery',
-            'Polling',
-            'Lock',
-            'Refresh',
-            'Lock Codes',
-            'Sensor',
-            'Actuator',
-            'Configuration',
-            'Switch Level',
-            'Temperature Measurement',
-            'Motion Sensor',
-            'Color Temperature',
-            'Illuminance Measurement',
-            'Contact Sensor',
-            'Three Axis',
-            'Acceleration Sensor',
-            'Momentary',
-            'Door Control',
-            'Garage Door Control',
-            'Relative Humidity Measurement',
-            'Presence Sensor',
-            'Thermostat',
-            'Energy Meter',
-            'Power Meter',
-            'Thermostat Cooling Setpoint',
-            'Thermostat Mode',
-            'Thermostat Fan Mode',
-            'Thermostat Operating State',
-            'Thermostat Heating Setpoint',
-            'Thermostat Setpoint',
-            'Indicator',
-            'Alarm',
-            'Alarm System Status'
+            'Switch', 'Light', 'Bulb', 'Color Control', 'Battery', 'Polling', 'Lock', 'Refresh', 'Lock Codes', 'Sensor',
+            'Actuator', 'Configuration', 'Switch Level', 'Temperature Measurement', 'Motion Sensor',
+            'Color Temperature', 'Illuminance Measurement', 'Contact Sensor', 'Three Axis', 'Acceleration Sensor',
+            'Air Quality Sensor', 'Momentary', 'Door Control', 'Garage Door Control', 'Relative Humidity Measurement',
+            'Presence Sensor', 'Carbon Dioxide Measurement', 'Carbon Monoxide Detector', 'Water Sensor',
+            'Window Shade', 'Valve', 'Video Stream', 'Music Player',
+            'Energy Meter', 'Power Meter', 'Power Source',
+            'Thermostat', 'Thermostat Cooling Setpoint', 'Thermostat Mode', 'Thermostat Fan Mode',
+            'Thermostat Operating State', 'Thermostat Heating Setpoint', 'Thermostat Setpoint',
+            'Fan Speed', 'Indicator',
+            'Audio Mute', 'Audio Notification', 'Audio Volume',
+            'Media Playback', 'Media Playback Repeat', 'Media Playback Shuffle', 'Media Track Control',
+            'Alarm', 'Alarm System Status',
+            'Timed Session'
         ];
         this.temperature_unit = 'F';
 

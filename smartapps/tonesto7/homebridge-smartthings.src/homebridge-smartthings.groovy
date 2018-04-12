@@ -38,6 +38,9 @@ def mainPage() {
 			input "otherList", "capability.refresh", title: "Other Devices (${otherList ? otherList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 			paragraph "Total Devices: ${getDeviceCnt()}"
 		}
+		section("Irrigation Devices:"){
+			input "sprinklerList", "capability.valve", title: "Irrigation Devices (${sprinklerList ? sprinklerList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+		}
 		section("Native Security") {
 			input "addShmDevice", "bool", title: "Enable SHM Alarm\nControl in HomeKit?", required: false, defaultValue: true, submitOnChange: true
 		}
@@ -57,6 +60,7 @@ def getAllDevices() {
 	allDevices = allDevices + settings?.otherList ?: []
 	allDevices = allDevices + settings?.sensorList ?: []
 	allDevices = allDevices + settings?.switchList ?: []
+	allDevices = allDevices + settings?.sprinklerList ?: []
 	return allDevices?.unique()
 }
 
@@ -131,9 +135,10 @@ def initialize() {
 	if(!state?.accessToken) {
 		 createAccessToken()
 	}
-	runIn(3, "registerOthers", [overwrite: true])
-   	runIn(6, "registerSensors", [overwrite: true])
-	runIn(8, "registerSwitches", [overwrite: true])
+	
+   	runIn(3, "registerSensors", [overwrite: true])
+	runIn(6, "registerSwitches", [overwrite: true])
+	runIn(8, "registerOthers", [overwrite: true])
 	state?.subscriptionRenewed = 0
 	subscribe(location, null, HubResponseEvent, [filterEvents:false])
 	subscribe(location, "alarmSystemStatus", changeHandler)
@@ -257,23 +262,21 @@ def deviceQuery() {
 	} 
 	
 	if (result) {
-		def jsonData =
-			[
-		 		name: device.displayName,
-				deviceid: device.id,
-				capabilities: deviceCapabilityList(device),
-				commands: deviceCommandList(device),
-				attributes: deviceAttributeList(device)
-		 	]
+		def jsonData = [
+			name: device.displayName,
+			deviceid: device.id,
+			capabilities: deviceCapabilityList(device),
+			commands: deviceCommandList(device),
+			attributes: deviceAttributeList(device)
+		]
 		def resultJson = new groovy.json.JsonOutput().toJson(jsonData)
 		render contentType: "application/json", data: resultJson
 	}
 }
 
 def deviceCapabilityList(device) {
-	device?.capabilities?.collectEntries { capability->
-		[ (capability?.name):1 ]
-  	}
+	def items = device?.capabilities?.collectEntries { capability-> [ (capability?.name):1 ] }
+	if(device?.id in settings?.sprinklerList) { items?.push(["irrigation":1])}
 }
 
 def deviceCommandList(device) {
@@ -326,9 +329,10 @@ def endSubscription() {
 
 def registerOthers() {
 //This has to be done at startup because it takes too long for a normal command.
-	log.debug "Registering All Devices"
+	log.debug "Registering All Other Devices"
 	state?.devchanges = []
 	registerChangeHandler(settings?.otherList)
+	registerChangeHandler(settings?.sprinklerList)
 }
 
 def registerSensors() {
