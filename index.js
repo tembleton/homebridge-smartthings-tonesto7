@@ -1,6 +1,6 @@
-var PubNub = require('pubnub');
 var smartthings = require('./lib/smartthingsapi');
 var http = require('http');
+var PubNub = require('pubnub');
 var os = require('os');
 
 var Service, Characteristic, Accessory, uuid, EnergyCharacteristics;
@@ -314,6 +314,4 @@ function smartthings_HandleHTTPResponse(request, response, mySmartThings) {
         });
     }
     response.end('OK');
-}
-response.end('OK');
 }
