@@ -1,6 +1,10 @@
 var inherits = require('util').inherits;
 
-var Accessory, Service, Characteristic, uuid, EnergyCharacteristics;
+var Accessory,
+    Service,
+    Characteristic,
+    uuid,
+    EnergyCharacteristics;
 
 /*
  *   SmartThings Accessory
@@ -40,8 +44,7 @@ function SmartThingsAccessory(platform, device) {
 
     Accessory.call(this, this.name, id);
     var that = this;
-    var accessoryInformationService = that
-        .getService(Service.AccessoryInformation)
+    that.getService(Service.AccessoryInformation)
         .setCharacteristic(Characteristic.FirmwareRevision, that.device.firmwareVersion)
         .setCharacteristic(Characteristic.Manufacturer, that.device.manufacturerName)
         .setCharacteristic(Characteristic.Model, `${toTitleCase(that.device.modelName)}`)
@@ -65,7 +68,7 @@ function SmartThingsAccessory(platform, device) {
 
     that.deviceGroup = 'unknown'; // that way we can easily tell if we set a device group
     var thisCharacteristic;
-    platform.log(JSON.stringify(device));
+    // platform.log(JSON.stringify(device));
     if (device && device.capabilities) {
         if (device.capabilities['Switch Level'] !== undefined) {
             if (device.commands.levelOpenClose) {
@@ -77,7 +80,9 @@ function SmartThingsAccessory(platform, device) {
                     callback(null, parseInt(that.device.attributes.level));
                 });
                 thisCharacteristic.on('set', function(value, callback) {
-                    that.platform.api.runCommand(callback, that.deviceid, 'setLevel', { value1: value });
+                    that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
+                        value1: value
+                    });
                 });
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
 
@@ -86,7 +91,7 @@ function SmartThingsAccessory(platform, device) {
                     callback(null, parseInt(that.device.attributes.level));
                 });
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
-            } else if (device.commands.lowSpeed) {
+            } else if ((device.name && device.name.includes(' fan')) || device.commands.lowSpeed) {
                 // This is a Ceiling Fan
                 that.deviceGroup = 'fans';
 
@@ -95,8 +100,11 @@ function SmartThingsAccessory(platform, device) {
                     callback(null, that.device.attributes.switch === 'on');
                 });
                 thisCharacteristic.on('set', function(value, callback) {
-                    if (value) that.platform.api.runCommand(callback, that.deviceid, 'on');
-                    else that.platform.api.runCommand(callback, that.deviceid, 'off');
+                    if (value) {
+                        that.platform.api.runCommand(callback, that.deviceid, 'on');
+                    } else {
+                        that.platform.api.runCommand(callback, that.deviceid, 'off');
+                    }
                 });
                 that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
 
@@ -105,7 +113,11 @@ function SmartThingsAccessory(platform, device) {
                     callback(null, parseInt(that.device.attributes.level));
                 });
                 thisCharacteristic.on('set', function(value, callback) {
-                    if (value > 0) that.platform.api.runCommand(callback, that.deviceid, 'setLevel', { value1: value });
+                    if (value > 0) {
+                        that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
+                            value1: value
+                        });
+                    }
                 });
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
             } else if (device.commands.setLevel) {
@@ -115,8 +127,11 @@ function SmartThingsAccessory(platform, device) {
                     callback(null, that.device.attributes.switch === 'on');
                 });
                 thisCharacteristic.on('set', function(value, callback) {
-                    if (value) that.platform.api.runCommand(callback, that.deviceid, 'on');
-                    else that.platform.api.runCommand(callback, that.deviceid, 'off');
+                    if (value) {
+                        that.platform.api.runCommand(callback, that.deviceid, 'on');
+                    } else {
+                        that.platform.api.runCommand(callback, that.deviceid, 'off');
+                    }
                 });
                 that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
 
@@ -125,7 +140,9 @@ function SmartThingsAccessory(platform, device) {
                     callback(null, parseInt(that.device.attributes.level));
                 });
                 thisCharacteristic.on('set', function(value, callback) {
-                    that.platform.api.runCommand(callback, that.deviceid, 'setLevel', { value1: value });
+                    that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
+                        value1: value
+                    });
                 });
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
 
@@ -135,7 +152,9 @@ function SmartThingsAccessory(platform, device) {
                         callback(null, Math.round(that.device.attributes.hue * 3.6));
                     });
                     thisCharacteristic.on('set', function(value, callback) {
-                        that.platform.api.runCommand(callback, that.deviceid, 'setHue', { value1: Math.round(value / 3.6) });
+                        that.platform.api.runCommand(callback, that.deviceid, 'setHue', {
+                            value1: Math.round(value / 3.6)
+                        });
                     });
                     that.platform.addAttributeUsage('hue', that.deviceid, thisCharacteristic);
 
@@ -144,7 +163,9 @@ function SmartThingsAccessory(platform, device) {
                         callback(null, parseInt(that.device.attributes.saturation));
                     });
                     thisCharacteristic.on('set', function(value, callback) {
-                        that.platform.api.runCommand(callback, that.deviceid, 'setSaturation', { value1: value });
+                        that.platform.api.runCommand(callback, that.deviceid, 'setSaturation', {
+                            value1: value
+                        });
                     });
                     that.platform.addAttributeUsage('saturation', that.deviceid, thisCharacteristic);
                 }
@@ -156,8 +177,11 @@ function SmartThingsAccessory(platform, device) {
 
             thisCharacteristic = that.getaddService(Service.GarageDoorOpener).getCharacteristic(Characteristic.TargetDoorState);
             thisCharacteristic.on('get', function(callback) {
-                if (that.device.attributes.door === 'closed' || that.device.attributes.door === 'closing') callback(null, Characteristic.TargetDoorState.CLOSED);
-                else if (that.device.attributes.door === 'open' || that.device.attributes.door === 'opening') callback(null, Characteristic.TargetDoorState.OPEN);
+                if (that.device.attributes.door === 'closed' || that.device.attributes.door === 'closing') {
+                    callback(null, Characteristic.TargetDoorState.CLOSED);
+                } else if (that.device.attributes.door === 'open' || that.device.attributes.door === 'opening') {
+                    callback(null, Characteristic.TargetDoorState.OPEN);
+                }
             });
             thisCharacteristic.on('set', function(value, callback) {
                 if (value === Characteristic.TargetDoorState.OPEN) {
@@ -248,10 +272,97 @@ function SmartThingsAccessory(platform, device) {
             that.platform.addAttributeUsage('lock', that.deviceid, thisCharacteristic);
         }
 
-        //    if (devices.capabilities["Valve"] !== undefined) {
-        //        that.deviceGroup = "valve";
-        // Thinking of implementing this as a Door service.
-        //    }
+        if (device.capabilities["Valve"] !== undefined) { //Currently only works with SmartThings Rachio Devices
+            that.deviceGroup = "valve";
+            let valveType = (device.capabilities['Irrigation'] !== undefined ? 1 : 0);
+
+            if (device.capabilities['Irrigation'] !== undefined) {
+                // that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
+                // if (device.attributes.scheduleType !== undefined) {
+                //     thisCharacteristic = that.getaddService(Service.IrrigationSystem).getCharacteristic(Characteristic.ProgramMode);
+                //     thisCharacteristic.on('get', function(callback) {
+                //         let val = 0;
+                //         if (device.attributes.scheduleType === 'program') {
+                //             val = 1;
+                //         } else if (device.attributes.scheduleType === 'off') {
+                //             val = 0;
+                //         } else if (device.attributes.scheduleType === 'manual') {
+                //             val = 2;
+                //         }
+                //         callback(null, val);
+                //     });
+                //     that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
+                // }
+            }
+            //Defines the valve type (irrigation or generic)
+            thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.ValveType);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, valveType);
+            });
+            that.platform.addAttributeUsage('valveType', that.deviceid, thisCharacteristic);
+
+            //Defines Valve State (opened/closed)
+            thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.Active);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, that.device.attributes.valve === 'open' ? 1 : 0);
+            });
+            thisCharacteristic.on('set', function(value, callback) {
+                if (device.attributes.inStandby !== 'true') {
+                    if (value) {
+                        that.platform.api.runCommand(callback, that.deviceid, 'open');
+                    } else {
+                        that.platform.api.runCommand(callback, that.deviceid, 'close');
+                    }
+                }
+            });
+            that.platform.addAttributeUsage('active', that.deviceid, thisCharacteristic);
+
+            //Gets the inUse Characteristic
+            thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.InUse);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, that.device.attributes.valve === 'open' ? 1 : 0);
+            });
+            that.platform.addAttributeUsage('inUse', that.deviceid, thisCharacteristic);
+
+            //Gets the inUse Characteristic
+            thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.IsConfigured);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, 1);
+            });
+            that.platform.addAttributeUsage('IsConfigured', that.deviceid, thisCharacteristic);
+
+            //Manages the zoneDuration Characteristic
+            if (device.attributes.zoneDuration !== undefined) {
+                thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.RemainingDuration);
+                thisCharacteristic.on('get', function(callback) {
+                    let zoneDur = device.attributes.zoneDuration || 0;
+                    if (zoneDur > 3600) { zoneDur = 3600; }
+                    // that.platform.log(that.deviceid + ' remainingDuration: ' + zoneDur);
+                    callback(null, parseInt(zoneDur));
+                });
+                that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
+
+                //Manages the zoneDuration Characteristic
+                thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.SetDuration);
+                thisCharacteristic.on('get', function(callback) {
+                    let zoneDur = device.attributes.zoneDuration || 0;
+                    if (zoneDur > 3600) {
+                        zoneDur = 3600;
+                    }
+                    // that.platform.log(that.deviceid + ' remainingDuration: ' + zoneDur);
+                    callback(null, parseInt(zoneDur));
+                });
+                thisCharacteristic.on('set', function(value, callback) {
+                    let zoneDur = value || 0;
+                    if (zoneDur > 3600) {
+                        zoneDur = 3600;
+                    }
+                    // that.platform.log(that.deviceid + ' set remainingDuration value : ' + zoneDur);
+                    that.platform.api.runCommand(callback, 'setZoneWaterTime', parseInt(zoneDur));
+                });
+                that.platform.addAttributeUsage('SetDuration', that.deviceid, thisCharacteristic);
+            }
+        }
 
         if (device.capabilities['Button'] !== undefined) {
             that.deviceGroup = 'button';
@@ -263,8 +374,11 @@ function SmartThingsAccessory(platform, device) {
                 callback(null, that.device.attributes.switch === 'on');
             });
             thisCharacteristic.on('set', function(value, callback) {
-                if (value) that.platform.api.runCommand(callback, that.deviceid, 'on');
-                else that.platform.api.runCommand(callback, that.deviceid, 'off');
+                if (value) {
+                    that.platform.api.runCommand(callback, that.deviceid, 'on');
+                } else {
+                    that.platform.api.runCommand(callback, that.deviceid, 'off');
+                }
             });
             that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
 
@@ -274,7 +388,9 @@ function SmartThingsAccessory(platform, device) {
                     callback(null, parseInt(that.device.attributes.level));
                 });
                 thisCharacteristic.on('set', function(value, callback) {
-                    that.platform.api.runCommand(callback, that.deviceid, 'setLevel', { value1: value });
+                    that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
+                        value1: value
+                    });
                 });
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
             }
@@ -285,8 +401,11 @@ function SmartThingsAccessory(platform, device) {
 
             thisCharacteristic = that.getaddService(Service.SmokeSensor).getCharacteristic(Characteristic.SmokeDetected);
             thisCharacteristic.on('get', function(callback) {
-                if (that.device.attributes.smoke === 'clear') callback(null, Characteristic.SmokeDetected.SMOKE_NOT_DETECTED);
-                else callback(null, Characteristic.SmokeDetected.SMOKE_DETECTED);
+                if (that.device.attributes.smoke === 'clear') {
+                    callback(null, Characteristic.SmokeDetected.SMOKE_NOT_DETECTED);
+                } else {
+                    callback(null, Characteristic.SmokeDetected.SMOKE_DETECTED);
+                }
             });
             that.platform.addAttributeUsage('smoke', that.deviceid, thisCharacteristic);
         }
@@ -296,8 +415,11 @@ function SmartThingsAccessory(platform, device) {
 
             thisCharacteristic = that.getaddService(Service.CarbonMonoxideSensor).getCharacteristic(Characteristic.CarbonMonoxideDetected);
             thisCharacteristic.on('get', function(callback) {
-                if (that.device.attributes.carbonMonoxide === 'clear') callback(null, Characteristic.CarbonMonoxideDetected.CO_LEVELS_NORMAL);
-                else callback(null, Characteristic.CarbonMonoxideDetected.CO_LEVELS_ABNORMAL);
+                if (that.device.attributes.carbonMonoxide === 'clear') {
+                    callback(null, Characteristic.CarbonMonoxideDetected.CO_LEVELS_NORMAL);
+                } else {
+                    callback(null, Characteristic.CarbonMonoxideDetected.CO_LEVELS_ABNORMAL);
+                }
             });
             that.platform.addAttributeUsage('carbonMonoxide', that.deviceid, thisCharacteristic);
         }
@@ -322,14 +444,18 @@ function SmartThingsAccessory(platform, device) {
             thisCharacteristic = that.getaddService(Service.LeakSensor).getCharacteristic(Characteristic.LeakDetected);
             thisCharacteristic.on('get', function(callback) {
                 var reply = Characteristic.LeakDetected.LEAK_DETECTED;
-                if (that.device.attributes.water === 'dry') reply = Characteristic.LeakDetected.LEAK_NOT_DETECTED;
+                if (that.device.attributes.water === 'dry') {
+                    reply = Characteristic.LeakDetected.LEAK_NOT_DETECTED;
+                }
                 callback(null, reply);
             });
             that.platform.addAttributeUsage('water', that.deviceid, thisCharacteristic);
         }
 
         if (device.capabilities['Presence Sensor'] !== undefined) {
-            if (that.deviceGroup === 'unknown') that.deviceGroup = 'sensor';
+            if (that.deviceGroup === 'unknown') {
+                that.deviceGroup = 'sensor';
+            }
 
             thisCharacteristic = that.getaddService(Service.OccupancySensor).getCharacteristic(Characteristic.OccupancyDetected);
             thisCharacteristic.on('get', function(callback) {
@@ -339,7 +465,9 @@ function SmartThingsAccessory(platform, device) {
         }
 
         if (device.capabilities['Relative Humidity Measurement'] !== undefined) {
-            if (that.deviceGroup === 'unknown') that.deviceGroup = 'sensor';
+            if (that.deviceGroup === 'unknown') {
+                that.deviceGroup = 'sensor';
+            }
             thisCharacteristic = that.getaddService(Service.HumiditySensor).getCharacteristic(Characteristic.CurrentRelativeHumidity);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, Math.round(that.device.attributes.humidity));
@@ -348,17 +476,24 @@ function SmartThingsAccessory(platform, device) {
         }
 
         if (device.capabilities['Temperature Measurement'] !== undefined) {
-            if (that.deviceGroup === 'unknown') that.deviceGroup = 'sensor';
+            if (that.deviceGroup === 'unknown') {
+                that.deviceGroup = 'sensor';
+            }
             thisCharacteristic = that.getaddService(Service.TemperatureSensor).getCharacteristic(Characteristic.CurrentTemperature);
             thisCharacteristic.on('get', function(callback) {
-                if (that.platform.temperature_unit === 'C') callback(null, Math.round(that.device.attributes.temperature * 10) / 10);
-                else callback(null, Math.round((that.device.attributes.temperature - 32) / 1.8 * 10) / 10);
+                if (that.platform.temperature_unit === 'C') {
+                    callback(null, Math.round(that.device.attributes.temperature * 10) / 10);
+                } else {
+                    callback(null, Math.round((that.device.attributes.temperature - 32) / 1.8 * 10) / 10);
+                }
             });
             that.platform.addAttributeUsage('temperature', that.deviceid, thisCharacteristic);
         }
         if (device.capabilities['Illuminance Measurement'] !== undefined) {
             // console.log(device);
-            if (that.deviceGroup === 'unknown') that.deviceGroup = 'sensor';
+            if (that.deviceGroup === 'unknown') {
+                that.deviceGroup = 'sensor';
+            }
             thisCharacteristic = that.getaddService(Service.LightSensor).getCharacteristic(Characteristic.CurrentAmbientLightLevel);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, Math.ceil(that.device.attributes.illuminance));
@@ -366,11 +501,16 @@ function SmartThingsAccessory(platform, device) {
             that.platform.addAttributeUsage('illuminance', that.deviceid, thisCharacteristic);
         }
         if (device.capabilities['Contact Sensor'] !== undefined && device.capabilities['Garage Door Control'] === undefined) {
-            if (that.deviceGroup === 'unknown') that.deviceGroup = 'sensor';
+            if (that.deviceGroup === 'unknown') {
+                that.deviceGroup = 'sensor';
+            }
             thisCharacteristic = that.getaddService(Service.ContactSensor).getCharacteristic(Characteristic.ContactSensorState);
             thisCharacteristic.on('get', function(callback) {
-                if (that.device.attributes.contact === 'closed') callback(null, Characteristic.ContactSensorState.CONTACT_DETECTED);
-                else callback(null, Characteristic.ContactSensorState.CONTACT_NOT_DETECTED);
+                if (that.device.attributes.contact === 'closed') {
+                    callback(null, Characteristic.ContactSensorState.CONTACT_DETECTED);
+                } else {
+                    callback(null, Characteristic.ContactSensorState.CONTACT_NOT_DETECTED);
+                }
             });
             that.platform.addAttributeUsage('contact', that.deviceid, thisCharacteristic);
         }
@@ -384,8 +524,11 @@ function SmartThingsAccessory(platform, device) {
 
             thisCharacteristic = that.getaddService(Service.BatteryService).getCharacteristic(Characteristic.StatusLowBattery);
             thisCharacteristic.on('get', function(callback) {
-                if (that.device.attributes.battery < 0.2) callback(null, Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW);
-                else callback(null, Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL);
+                if (that.device.attributes.battery < 0.2) {
+                    callback(null, Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW);
+                } else {
+                    callback(null, Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL);
+                }
             });
 
             that.getaddService(Service.BatteryService).setCharacteristic(Characteristic.ChargingState, Characteristic.ChargingState.NOT_CHARGING);
@@ -410,11 +553,15 @@ function SmartThingsAccessory(platform, device) {
         }
 
         if (device.capabilities['Acceleration Sensor'] !== undefined) {
-            if (that.deviceGroup === 'unknown') that.deviceGroup = 'sensor';
+            if (that.deviceGroup === 'unknown') {
+                that.deviceGroup = 'sensor';
+            }
         }
 
         if (device.capabilities['Three Axis'] !== undefined) {
-            if (that.deviceGroup === 'unknown') that.deviceGroup = 'sensor';
+            if (that.deviceGroup === 'unknown') {
+                that.deviceGroup = 'sensor';
+            }
         }
 
         if (device.capabilities['Thermostat'] !== undefined) {
@@ -492,8 +639,11 @@ function SmartThingsAccessory(platform, device) {
 
             thisCharacteristic = that.getaddService(Service.Thermostat).getCharacteristic(Characteristic.CurrentTemperature);
             thisCharacteristic.on('get', function(callback) {
-                if (that.platform.temperature_unit === 'C') callback(null, Math.round(that.device.attributes.temperature * 10) / 10);
-                else callback(null, Math.round((that.device.attributes.temperature - 32) / 1.8 * 10) / 10);
+                if (that.platform.temperature_unit === 'C') {
+                    callback(null, Math.round(that.device.attributes.temperature * 10) / 10);
+                } else {
+                    callback(null, Math.round((that.device.attributes.temperature - 32) / 1.8 * 10) / 10);
+                }
             });
             that.platform.addAttributeUsage('temperature', that.deviceid, thisCharacteristic);
 
@@ -517,15 +667,22 @@ function SmartThingsAccessory(platform, device) {
                         temp = Math.abs(high - cur) < Math.abs(cur - low) ? high : low;
                         break;
                 }
-                if (!temp) callback('Unknown');
-                else if (that.platform.temperature_unit === 'C') callback(null, Math.round(temp * 10) / 10);
-                else callback(null, Math.round((temp - 32) / 1.8 * 10) / 10);
+                if (!temp) {
+                    callback('Unknown');
+                } else if (that.platform.temperature_unit === 'C') {
+                    callback(null, Math.round(temp * 10) / 10);
+                } else {
+                    callback(null, Math.round((temp - 32) / 1.8 * 10) / 10);
+                }
             });
             thisCharacteristic.on('set', function(value, callback) {
                 // Convert the Celsius value to the appropriate unit for Smartthings
                 var temp = value;
-                if (that.platform.temperature_unit === 'C') temp = value;
-                else temp = value * 1.8 + 32;
+                if (that.platform.temperature_unit === 'C') {
+                    temp = value;
+                } else {
+                    temp = value * 1.8 + 32;
+                }
 
                 // Set the appropriate temperature unit based on the mode
                 switch (that.device.attributes.thermostatMode) {
@@ -550,9 +707,13 @@ function SmartThingsAccessory(platform, device) {
                         var cur = that.device.attributes.temperature;
                         var isHighTemp = Math.abs(high - cur) < Math.abs(cur - low);
                         if (isHighTemp) {
-                            that.platform.api.runCommand(callback, that.deviceid, 'setCoolingSetpoint', { value1: temp });
+                            that.platform.api.runCommand(callback, that.deviceid, 'setCoolingSetpoint', {
+                                value1: temp
+                            });
                         } else {
-                            that.platform.api.runCommand(null, that.deviceid, 'setHeatingSetpoint', { value1: temp });
+                            that.platform.api.runCommand(null, that.deviceid, 'setHeatingSetpoint', {
+                                value1: temp
+                            });
                         }
                         break;
                 }
@@ -564,21 +725,30 @@ function SmartThingsAccessory(platform, device) {
 
             thisCharacteristic = that.getaddService(Service.Thermostat).getCharacteristic(Characteristic.TemperatureDisplayUnits);
             thisCharacteristic.on('get', function(callback) {
-                if (platform.temperature_unit === 'C') callback(null, Characteristic.TemperatureDisplayUnits.CELSIUS);
-                else callback(null, Characteristic.TemperatureDisplayUnits.FAHRENHEIT);
+                if (platform.temperature_unit === 'C') {
+                    callback(null, Characteristic.TemperatureDisplayUnits.CELSIUS);
+                } else {
+                    callback(null, Characteristic.TemperatureDisplayUnits.FAHRENHEIT);
+                }
             });
             // that.platform.addAttributeUsage("temperature_unit", "platform", thisCharacteristic);
 
             thisCharacteristic = that.getaddService(Service.Thermostat).getCharacteristic(Characteristic.HeatingThresholdTemperature);
             thisCharacteristic.on('get', function(callback) {
-                if (that.platform.temperature_unit === 'C') callback(null, Math.round(that.device.attributes.heatingSetpoint * 10) / 10);
-                else callback(null, Math.round((that.device.attributes.heatingSetpoint - 32) / 1.8 * 10) / 10);
+                if (that.platform.temperature_unit === 'C') {
+                    callback(null, Math.round(that.device.attributes.heatingSetpoint * 10) / 10);
+                } else {
+                    callback(null, Math.round((that.device.attributes.heatingSetpoint - 32) / 1.8 * 10) / 10);
+                }
             });
             thisCharacteristic.on('set', function(value, callback) {
                 // Convert the Celsius value to the appropriate unit for Smartthings
                 var temp = value;
-                if (that.platform.temperature_unit === 'C') temp = value;
-                else temp = value * 1.8 + 32;
+                if (that.platform.temperature_unit === 'C') {
+                    temp = value;
+                } else {
+                    temp = value * 1.8 + 32;
+                }
                 that.platform.api.runCommand(callback, that.deviceid, 'setHeatingSetpoint', {
                     value1: temp
                 });
@@ -588,14 +758,20 @@ function SmartThingsAccessory(platform, device) {
 
             thisCharacteristic = that.getaddService(Service.Thermostat).getCharacteristic(Characteristic.CoolingThresholdTemperature);
             thisCharacteristic.on('get', function(callback) {
-                if (that.platform.temperature_unit === 'C') callback(null, Math.round(that.device.attributes.coolingSetpoint * 10) / 10);
-                else callback(null, Math.round((that.device.attributes.coolingSetpoint - 32) / 1.8 * 10) / 10);
+                if (that.platform.temperature_unit === 'C') {
+                    callback(null, Math.round(that.device.attributes.coolingSetpoint * 10) / 10);
+                } else {
+                    callback(null, Math.round((that.device.attributes.coolingSetpoint - 32) / 1.8 * 10) / 10);
+                }
             });
             thisCharacteristic.on('set', function(value, callback) {
                 // Convert the Celsius value to the appropriate unit for Smartthings
                 var temp = value;
-                if (that.platform.temperature_unit === 'C') temp = value;
-                else temp = value * 1.8 + 32;
+                if (that.platform.temperature_unit === 'C') {
+                    temp = value;
+                } else {
+                    temp = value * 1.8 + 32;
+                }
                 that.platform.api.runCommand(callback, that.deviceid, 'setCoolingSetpoint', {
                     value1: temp
                 });
@@ -625,12 +801,43 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.api.runCommand(callback, 'alarmSystemStatus', val);
 
                 that.device.attributes.alarmSystemStatus = val;
-
             });
             that.platform.addAttributeUsage('alarmSystemStatus', that.deviceid, thisCharacteristic);
         }
-    }
+        if (device.capabilities['Air Quality Sensor'] !== undefined) {
+            that.deviceGroup = 'airquality';
+            thisCharacteristic = that.getaddService(Service.AirQualitySensor).getCharacteristic(Characteristic.AirQuality);
+            thisCharacteristic.on('get', function(callback) {
+                // Characteristic.AirQuality.UNKNOWN = 0;
+                // Characteristic.AirQuality.EXCELLENT = 1;
+                // Characteristic.AirQuality.GOOD = 2;
+                // Characteristic.AirQuality.FAIR = 3;
+                // Characteristic.AirQuality.INFERIOR = 4;
+                // Characteristic.AirQuality.POOR = 5;
 
+                callback(null, convertAlarmState(that.device.attributes.alarmSystemStatus.toLowerCase(), true));
+            });
+            that.platform.addAttributeUsage('airQuality', that.deviceid, thisCharacteristic);
+
+            thisCharacteristic = that.getaddService(Service.AirQualitySensor).getCharacteristic(Characteristic.TargetAirQuality);
+            thisCharacteristic.on('get', function(callback) {
+                // Characteristic.AirQuality.UNKNOWN = 0;
+                // Characteristic.AirQuality.EXCELLENT = 1;
+                // Characteristic.AirQuality.GOOD = 2;
+                // Characteristic.AirQuality.FAIR = 3;
+                // Characteristic.AirQuality.INFERIOR = 4;
+                // Characteristic.AirQuality.POOR = 5;
+                callback(null, convertAlarmState(that.device.attributes.alarmSystemStatus.toLowerCase(), true));
+            });
+            thisCharacteristic.on('set', function(value, callback) {
+                // Characteristic.TargetAirQuality.EXCELLENT = 0;
+                // Characteristic.TargetAirQuality.GOOD = 1;
+                // Characteristic.TargetAirQuality.FAIR = 2;
+                // that.platform.api.runCommand(callback, 'alarmSystemStatus', val);
+            });
+            that.platform.addAttributeUsage('airQuality', that.deviceid, thisCharacteristic);
+        }
+    }
     this.loadData(device, that);
 }
 
@@ -656,7 +863,9 @@ function convertAlarmState(value, valInt = false) {
 
 function loadData(data, myObject) {
     var that = this;
-    if (myObject !== undefined) that = myObject;
+    if (myObject !== undefined) {
+        that = myObject;
+    }
     if (data !== undefined) {
         this.device = data;
         for (var i = 0; i < that.services.length; i++) {
@@ -667,7 +876,9 @@ function loadData(data, myObject) {
     } else {
         this.log.debug('Fetching Device Data');
         this.platform.api.getDevice(this.deviceid, function(data) {
-            if (data === undefined) return;
+            if (data === undefined) {
+                return;
+            }
             this.device = data;
             for (var i = 0; i < that.services.length; i++) {
                 for (var j = 0; j < that.services[i].characteristics.length; j++) {

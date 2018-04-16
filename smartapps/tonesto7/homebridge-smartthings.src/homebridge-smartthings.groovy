@@ -6,7 +6,7 @@
  */
  
 import groovy.transform.Field
-@Field String appVersion = "1.0.2"
+@Field String appVersion = "1.0.3"
 @Field String appIconUrl = "https://raw.githubusercontent.com/pdlove/homebridge-smartthings/master/smartapps/JSON%401.png"
 
 definition(
@@ -40,7 +40,8 @@ def mainPage() {
             paragraph "Total Devices: ${getDeviceCnt()}"
         }
         section("Irrigation Devices:"){
-			input "irrigationList", "capability.valve", title: "Irrigation Devices (${sprinklerList ? sprinklerList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+            paragraph "Currently only tested with Rachio Device Integration"
+			input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 		}
         section("Native Security") {
             input "addShmDevice", "bool", title: "Enable SHM Alarm\nControl in HomeKit?", required: false, defaultValue: true, submitOnChange: true
@@ -288,15 +289,10 @@ def deviceQuery() {
 }
 
 def deviceCapabilityList(device) {
-    // device?.capabilities?.collectEntries { capability->
-    // 	[ (capability?.name):1 ]
-  	// }
     def items = device?.capabilities?.collectEntries { capability-> [ (capability?.name):1 ] }
-	if(settings?.sprinklerList?.contains(device?.id)) { 
-		items?.push(["irrigation":1])
-		log.debug "items: $items"
-	}
-	
+    if(settings?.irrigationList?.find { it?.id == device?.id }) { 
+		items["Irrigation"] = 1
+    }
 	return items
 }
 
@@ -349,7 +345,7 @@ def endSubscription() {
 
 def registerDevices() {
 //This has to be done at startup because it takes too long for a normal command.
-	log.debug "Registering All Devices"
+	log.debug "Registering All Devices and Irrigation"
     state?.devchanges = []
 	registerChangeHandler(settings?.deviceList)
     registerChangeHandler(settings?.irrigationList)
@@ -380,13 +376,14 @@ def ignoreTheseAttributes() {
     ]
 }
 
-def registerChangeHandler(devices) {
+def registerChangeHandler(devices, showlog=false) {
 	devices?.each { device ->
 		def theAtts = device?.supportedAttributes
+        if(showlog) { log.debug "atts: ${theAtts}" }
 		theAtts?.each {att ->
             if(!(ignoreTheseAttributes().contains(att?.name))) {
 		        subscribe(device, att?.name, "changeHandler")
-    		    log.debug "Registering ${device?.displayName}.${att?.name}"
+    		    if(showlog) { log.debug "Registering ${device?.displayName}.${att?.name}" }
             }
 		}
 	}

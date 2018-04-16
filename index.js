@@ -114,7 +114,7 @@ SmartThingsPlatform.prototype = {
         });
     },
     accessories: function(callback) {
-        this.log('Fetching Smart Things devices.');
+        this.log('Fetching SmartThings devices.');
 
         // IMPORTANT Links:
         // https://developer.apple.com/documentation/homekit/hmaccessory
@@ -158,11 +158,12 @@ SmartThingsPlatform.prototype = {
             'Water Sensor',
             'Window Shade',
             'Valve',
-            'Video Stream',
-            'Music Player',
+            'Irrigation',
+            // 'Video Stream',
+            // 'Music Player',
             'Energy Meter',
             'Power Meter',
-            'Power Source',
+            // 'Power Source',
             'Thermostat',
             'Thermostat Cooling Setpoint',
             'Thermostat Mode',
@@ -170,7 +171,7 @@ SmartThingsPlatform.prototype = {
             'Thermostat Operating State',
             'Thermostat Heating Setpoint',
             'Thermostat Setpoint',
-            'Fan Speed',
+            // 'Fan Speed',
             'Indicator',
             'Audio Mute',
             'Audio Notification',
@@ -194,20 +195,6 @@ SmartThingsPlatform.prototype = {
             // Initialize Update Mechanism for realtime-ish updates.
             if (that.update_method === 'api') {
                 setInterval(that.doIncrementalUpdate.bind(that), that.update_seconds * 1000);
-            } else if (that.update_method === 'pubnub') {
-                // Uses user's PubNub account
-                that.api.getSubscriptionService(function(data) {
-                    pubnub = new PubNub({ subscribeKey: data.pubnub_subscribekey, ssl: true });
-                    pubnub.addListener({
-                        status: function(statusEvent) {
-                            if (statusEvent.category === 'PNReconnectedCategory') that.reloadData(null);
-                        },
-                        message: function(message) {
-                            that.processFieldUpdate(message.message, that);
-                        }
-                    });
-                    pubnub.subscribe({ channels: [that.pubnub_channel] });
-                });
             } else if (that.update_method === 'direct') {
                 // The Hub sends updates to this module using http
                 smartthings_SetupHTTPServer(that);
