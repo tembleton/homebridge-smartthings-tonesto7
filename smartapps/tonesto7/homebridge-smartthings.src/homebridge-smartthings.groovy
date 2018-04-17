@@ -166,7 +166,7 @@ def initialize() {
     // runIn(8, "registerOthers", [overwrite: true])
 	state?.subscriptionRenewed = 0
     subscribe(location, null, HubResponseEvent, [filterEvents:false])
-    subscribe(location, "alarmSystemStatus", changeHandler)
+    if(settings?.addShmDevice) { subscribe(location, "alarmSystemStatus", changeHandler) }
 }
 
 def authError() {
