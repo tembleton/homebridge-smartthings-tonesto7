@@ -123,7 +123,7 @@ SmartThingsPlatform.prototype = {
         // https://github.com/KhaosT/HAP-NodeJS/blob/master/lib/gen/HomeKitTypes.js
 
         var that = this;
-        var foundAccessories = [];
+        // var foundAccessories = [];
         this.deviceLookup = [];
         this.unknownCapabilities = [];
         this.knownCapabilities = [
@@ -147,7 +147,7 @@ SmartThingsPlatform.prototype = {
             'Contact Sensor',
             'Three Axis',
             'Acceleration Sensor',
-            'Air Quality Sensor',
+            // 'Air Quality Sensor',
             'Momentary',
             'Door Control',
             'Garage Door Control',
@@ -159,8 +159,6 @@ SmartThingsPlatform.prototype = {
             'Window Shade',
             'Valve',
             'Irrigation',
-            // 'Video Stream',
-            // 'Music Player',
             'Energy Meter',
             'Power Meter',
             // 'Power Source',
@@ -173,6 +171,8 @@ SmartThingsPlatform.prototype = {
             'Thermostat Setpoint',
             // 'Fan Speed',
             'Indicator',
+            // 'Video Stream',
+            // 'Music Player',
             'Audio Mute',
             'Audio Notification',
             'Audio Volume',

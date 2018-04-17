@@ -45,6 +45,7 @@ function SmartThingsAccessory(platform, device) {
     Accessory.call(this, this.name, id);
     var that = this;
     that.getService(Service.AccessoryInformation)
+        .setCharacteristic(Characteristic.Identify, (that.device.capabilities['Switch'] !== undefined))
         .setCharacteristic(Characteristic.FirmwareRevision, that.device.firmwareVersion)
         .setCharacteristic(Characteristic.Manufacturer, that.device.manufacturerName)
         .setCharacteristic(Characteristic.Model, `${toTitleCase(that.device.modelName)}`)
@@ -70,7 +71,7 @@ function SmartThingsAccessory(platform, device) {
     var thisCharacteristic;
     // platform.log(JSON.stringify(device));
     if (device && device.capabilities) {
-        if (device.capabilities['Switch Level'] !== undefined && device.capabilities['Speaker'] === undefined) {
+        if (device.capabilities['Switch Level'] !== undefined && device.capabilities['Speaker'] === undefined && device.capabilities['Fan'] === undefined) {
             if (device.commands.levelOpenClose) {
                 // This is a Window Shade
                 that.deviceGroup = 'shades';
@@ -91,7 +92,7 @@ function SmartThingsAccessory(platform, device) {
                     callback(null, parseInt(that.device.attributes.level));
                 });
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
-            } else if (device.capabilities['Fan'] || device.commands.lowSpeed) { //Handle Fans with Level or lowSpeed command
+            } else if (device.commands.lowSpeed !== undefined || device.attributes.level !== undefined) { //Handle Fans with Level or lowSpeed command
                 // This is a Ceiling Fan
                 that.deviceGroup = 'fans';
 
@@ -120,8 +121,9 @@ function SmartThingsAccessory(platform, device) {
                     }
                 });
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
-            } else if (device.commands.setLevel) {
+            } else if (device.capabilities['LightBulb'] !== undefined || device.commands.setLevel) {
                 that.deviceGroup = 'lights';
+
                 thisCharacteristic = that.getaddService(Service.Lightbulb).getCharacteristic(Characteristic.On);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, that.device.attributes.switch === 'on');
@@ -402,7 +404,6 @@ function SmartThingsAccessory(platform, device) {
 
         //Handles Standalone Fan with no levels
         if (device.capabilities['Fan'] !== undefined && that.deviceGroup === 'unknown') {
-            // This is a Ceiling Fan
             that.deviceGroup = 'fans';
 
             thisCharacteristic = that.getaddService(Service.Fan).getCharacteristic(Characteristic.On);
@@ -420,8 +421,10 @@ function SmartThingsAccessory(platform, device) {
         }
 
         if (device.capabilities['Switch'] !== undefined && that.deviceGroup === 'unknown') {
-            if (device.capabilities['Light'] !== undefined) {
-                that.deviceGroup = 'switch';
+            //Handles Standalone Fan with no levels
+            if (device.capabilities['LightBulb'] !== undefined) {
+                that.deviceGroup = 'light';
+
                 thisCharacteristic = that.getaddService(Service.Lightbulb).getCharacteristic(Characteristic.On);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, that.device.attributes.switch === 'on');
@@ -436,6 +439,7 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
             } else {
                 that.deviceGroup = 'switch';
+
                 thisCharacteristic = that.getaddService(Service.Switch).getCharacteristic(Characteristic.On);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, that.device.attributes.switch === 'on');
@@ -449,18 +453,6 @@ function SmartThingsAccessory(platform, device) {
                 });
                 that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
             }
-            // if (device.capabilities['Switch Level'] !== undefined) {
-            //     thisCharacteristic = that.getaddService(Service.Lightbulb).getCharacteristic(Characteristic.Brightness);
-            //     thisCharacteristic.on('get', function(callback) {
-            //         callback(null, parseInt(that.device.attributes.level));
-            //     });
-            //     thisCharacteristic.on('set', function(value, callback) {
-            //         that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
-            //             value1: value
-            //         });
-            //     });
-            //     that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
-            // }
         }
 
         // Smoke Detectors
@@ -490,6 +482,27 @@ function SmartThingsAccessory(platform, device) {
                 }
             });
             that.platform.addAttributeUsage('carbonMonoxide', that.deviceid, thisCharacteristic);
+        }
+
+        if (device.capabilities['Carbon Dioxide Measurement'] !== undefined && that.device.attributes.carbonDioxideMeasurement) {
+            that.deviceGroup = 'carbonMonoxide';
+
+            thisCharacteristic = that.getaddService(Service.CarbonMonoxideSensor).getCharacteristic(Characteristic.CarbonMonoxideDetected);
+            thisCharacteristic.on('get', function(callback) {
+                if (that.device.attributes.carbonDioxideMeasurement > 0) {
+                    callback(null, Characteristic.CarbonMonoxideDetected.CO_LEVELS_ABNORMAL);
+                } else {
+                    callback(null, Characteristic.CarbonMonoxideDetected.CO_LEVELS_NORMAL);
+                }
+            });
+            that.platform.addAttributeUsage('carbonMonoxide', that.deviceid, thisCharacteristic);
+            thisCharacteristic = that.getaddService(Service.CarbonMonoxideSensor).getCharacteristic(Characteristic.CarbonMonoxideLevel);
+            thisCharacteristic.on('get', function(callback) {
+                if (that.device.attributes.carbonDioxideMeasurement >= 0) {
+                    callback(null, that.device.attributes.carbonDioxideMeasurement);
+                }
+            });
+            that.platform.addAttributeUsage('carbonMonoxideLevel', that.deviceid, thisCharacteristic);
         }
 
         if (device.capabilities['Motion Sensor'] !== undefined) {

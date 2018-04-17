@@ -310,7 +310,7 @@ def deviceCapabilityList(device) {
 		items["Irrigation"] = 1
     }
     if(settings?.lightList.find { it?.id == device?.id }) {
-        items["Light"] = 1
+        items["LightBulb"] = 1
     }
     if(settings?.fanList.find { it?.id == device?.id }) {
         items["Fan"] = 1
@@ -404,7 +404,7 @@ def ignoreTheseAttributes() {
 		'codeReport', 'scanCodes', 'verticalAccuracy', 'horizontalAccuracyMetric', 'altitudeMetric', 'latitude', 'distanceMetric', 'closestPlaceDistanceMetric',
 		'closestPlaceDistance', 'leavingPlace', 'currentPlace', 'codeChanged', 'codeLength', 'lockCodes', 'healthStatus', 'horizontalAccuracy', 'bearing', 'speedMetric',
 		'speed', 'verticalAccuracyMetric', 'altitude', 'indicatorStatus', 'todayCost', 'longitude', 'distance', 'previousPlace','closestPlace', 'places', 'minCodeLength',
-		'arrivingAtPlace'
+		'arrivingAtPlace', 'lastUpdatedDt'
     ]
 }
 
