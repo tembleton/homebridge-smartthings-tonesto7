@@ -145,7 +145,7 @@ SmartThingsPlatform.prototype = {
             'Color Temperature',
             'Illuminance Measurement',
             'Contact Sensor',
-            'Three Axis',
+            // 'Three Axis',
             'Acceleration Sensor',
             // 'Air Quality Sensor',
             'Momentary',

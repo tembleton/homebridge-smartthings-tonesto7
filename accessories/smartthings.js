@@ -70,8 +70,12 @@ function SmartThingsAccessory(platform, device) {
     that.deviceGroup = 'unknown'; // that way we can easily tell if we set a device group
     var thisCharacteristic;
     // platform.log(JSON.stringify(device));
+    let isFan = (device.capabilities['Fan'] !== undefined || device.commands.lowSpeed !== undefined);
+    let isLight = (device.capabilities['LightBulb'] !== undefined || device.name.includes('light'));
+    let isSpeaker = (device.capabilities['Speaker'] !== undefined);
+
     if (device && device.capabilities) {
-        if (device.capabilities['Switch Level'] !== undefined && device.capabilities['Speaker'] === undefined && device.capabilities['Fan'] === undefined) {
+        if (device.capabilities['Switch Level'] !== undefined && !isSpeaker && !isFan) {
             if (device.commands.levelOpenClose) {
                 // This is a Window Shade
                 that.deviceGroup = 'shades';
@@ -92,36 +96,7 @@ function SmartThingsAccessory(platform, device) {
                     callback(null, parseInt(that.device.attributes.level));
                 });
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
-            } else if (device.commands.lowSpeed !== undefined || device.attributes.level !== undefined) { //Handle Fans with Level or lowSpeed command
-                // This is a Ceiling Fan
-                that.deviceGroup = 'fans';
-
-                thisCharacteristic = that.getaddService(Service.Fan).getCharacteristic(Characteristic.On);
-                thisCharacteristic.on('get', function(callback) {
-                    callback(null, that.device.attributes.switch === 'on');
-                });
-                thisCharacteristic.on('set', function(value, callback) {
-                    if (value) {
-                        that.platform.api.runCommand(callback, that.deviceid, 'on');
-                    } else {
-                        that.platform.api.runCommand(callback, that.deviceid, 'off');
-                    }
-                });
-                that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
-
-                thisCharacteristic = that.getaddService(Service.Fan).getCharacteristic(Characteristic.RotationSpeed);
-                thisCharacteristic.on('get', function(callback) {
-                    callback(null, parseInt(that.device.attributes.level));
-                });
-                thisCharacteristic.on('set', function(value, callback) {
-                    if (value > 0) {
-                        that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
-                            value1: value
-                        });
-                    }
-                });
-                that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
-            } else if (device.capabilities['LightBulb'] !== undefined || device.commands.setLevel) {
+            } else if (isLight === true || device.commands.setLevel) {
                 that.deviceGroup = 'lights';
 
                 thisCharacteristic = that.getaddService(Service.Lightbulb).getCharacteristic(Characteristic.On);
@@ -371,8 +346,7 @@ function SmartThingsAccessory(platform, device) {
         }
 
         //Defines Speaker Device
-        if (device.capabilities['Speaker'] !== undefined) {
-            // This is a Ceiling Fan
+        if (isSpeaker === true) {
             that.deviceGroup = 'speakers';
 
             thisCharacteristic = that.getaddService(Service.Speaker).getCharacteristic(Characteristic.Volume);
@@ -403,10 +377,10 @@ function SmartThingsAccessory(platform, device) {
         }
 
         //Handles Standalone Fan with no levels
-        if (device.capabilities['Fan'] !== undefined && that.deviceGroup === 'unknown') {
+        if (isFan === true && that.deviceGroup === 'unknown') {
             that.deviceGroup = 'fans';
 
-            thisCharacteristic = that.getaddService(Service.Fan).getCharacteristic(Characteristic.On);
+            thisCharacteristic = that.getaddService(Service.Fanv2).getCharacteristic(Characteristic.Active);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, that.device.attributes.switch === 'on');
             });
@@ -418,11 +392,33 @@ function SmartThingsAccessory(platform, device) {
                 }
             });
             that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
+
+            // THIS WILL ALLOW CONTROL OF AUTO/MANUAL
+            // thisCharacteristic = that.getaddService(Service.Fanv2).getCharacteristic(Characteristic.TargetFanState);
+            // thisCharacteristic.on('get', function(callback) {
+            //     callback(null, Characteristic.TargetFanState.MANUAL);
+            // });
+            // that.platform.addAttributeUsage('fanState', that.deviceid, thisCharacteristic);
+
+            if (that.device.attributes.level !== undefined) {
+                thisCharacteristic = that.getaddService(Service.Fanv2).getCharacteristic(Characteristic.RotationSpeed);
+                thisCharacteristic.on('get', function(callback) {
+                    callback(null, parseInt(that.device.attributes.level));
+                });
+                thisCharacteristic.on('set', function(value, callback) {
+                    if (value > 0) {
+                        that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
+                            value1: value
+                        });
+                    }
+                });
+                that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
+            }
         }
 
         if (device.capabilities['Switch'] !== undefined && that.deviceGroup === 'unknown') {
             //Handles Standalone Fan with no levels
-            if (device.capabilities['LightBulb'] !== undefined) {
+            if (isLight === true) {
                 that.deviceGroup = 'light';
 
                 thisCharacteristic = that.getaddService(Service.Lightbulb).getCharacteristic(Characteristic.On);
