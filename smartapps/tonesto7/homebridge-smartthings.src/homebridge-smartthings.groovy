@@ -39,11 +39,17 @@ def mainPage() {
             input "deviceList", "capability.refresh", title: "Other Devices: (${deviceList ? deviceList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             paragraph "Total Devices: ${getDeviceCnt()}"
         }
-        section("Irrigation Devices:"){
-            paragraph "Currently only tested with Rachio Device Integration"
+        section("Define Categories:") {
+            paragraph "These Categories will add the necessary capabilities to make sure they are recognized by HomeKit as the specific device type"
+            input "lightList", "capability.switch", title: "Lights: (${lightList ? lightList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+            input "fanList", "capability.switch", title: "Fans: (${fanList ? fanList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+            input "speakerList", "capability.switch", title: "Speakers: (${speakerList ? speakerList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+        }
+        section("Irrigation Devices:") {
+            paragraph "Notice: \nOnly Tested with Rachio Devices"
 			input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 		}
-        section("Native Security") {
+        section("Alarm Support (SHM)") {
             input "addShmDevice", "bool", title: "Enable SHM Alarm\nControl in HomeKit?", required: false, defaultValue: true, submitOnChange: true
         }
         section() {
@@ -62,6 +68,9 @@ def getDeviceCnt() {
     allDevices = allDevices + settings?.deviceList ?: []
     allDevices = allDevices + settings?.sensorList ?: []
     allDevices = allDevices + settings?.switchList ?: []
+    allDevices = allDevices + settings?.lightList ?: []
+    allDevices = allDevices + settings?.fanList ?: []
+    allDevices = allDevices + settings?.speakerList ?: []
     allDevices = allDevices + settings?.irrigationList ?: []
     state?.deviceCount = allDevices?.unique()?.size() ?: 0
     return allDevices?.unique()?.size() ?: 0
@@ -71,7 +80,7 @@ def getAppEndpointUrl(subPath)	{ return "${apiServerUrl("/api/smartapps/installa
 
 def renderDevices() {
     def deviceData = []
-    def items = ["deviceList", "sensorList", "switchList", "irrigationList"]
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList"]
     items?.each { item ->   
         if(settings[item]?.size()) {     
             settings[item]?.each { dev->
@@ -124,6 +133,12 @@ def findDevice(paramid) {
 	if (device) return device
   	device = switchList.find { it.id == paramid }
     if (device) return device
+    device = lightList.find { it.id == paramid }
+    if (device) return device
+    device = fanList.find { it.id == paramid }
+    if (device) return device
+    device = speakerList.find { it.id == paramid }
+    if (device) return device
     device = irrigationList.find { it.id == paramid }
 	return device
  }
@@ -143,11 +158,12 @@ def updated() {
 
 def initialize() {
 	if(!state?.accessToken) {
-         createAccessToken()
+        createAccessToken()
     }
-	runIn(3, "registerDevices", [overwrite: true])
-   	runIn(6, "registerSensors", [overwrite: true])
-    runIn(8, "registerSwitches", [overwrite: true])
+	runIn(2, "registerDevices", [overwrite: true])
+   	runIn(4, "registerSensors", [overwrite: true])
+    runIn(6, "registerSwitches", [overwrite: true])
+    // runIn(8, "registerOthers", [overwrite: true])
 	state?.subscriptionRenewed = 0
     subscribe(location, null, HubResponseEvent, [filterEvents:false])
     subscribe(location, "alarmSystemStatus", changeHandler)
@@ -293,6 +309,15 @@ def deviceCapabilityList(device) {
     if(settings?.irrigationList?.find { it?.id == device?.id }) { 
 		items["Irrigation"] = 1
     }
+    if(settings?.lightList.find { it?.id == device?.id }) {
+        items["Light"] = 1
+    }
+    if(settings?.fanList.find { it?.id == device?.id }) {
+        items["Fan"] = 1
+    }
+    if(settings?.speakerList.find { it?.id == device?.id }) {
+        items["Speaker"] = 1
+    }
 	return items
 }
 
@@ -345,24 +370,31 @@ def endSubscription() {
 
 def registerDevices() {
 //This has to be done at startup because it takes too long for a normal command.
-	log.debug "Registering All Devices and Irrigation"
     state?.devchanges = []
+    log.debug "Registering (${settings?.deviceList?.size() ?: 0}) Other Devices"
 	registerChangeHandler(settings?.deviceList)
+    log.debug "Registering (${settings?.irrigationList?.size() ?: 0}) Sprinklers"
     registerChangeHandler(settings?.irrigationList)
 }
 
 def registerSensors() {
 //This has to be done at startup because it takes too long for a normal command.
-	log.debug "Registering All Sensors"
     state?.devchanges = []
+    log.debug "Registering (${settings?.sensorList?.size() ?: 0}) Sensors"
     registerChangeHandler(settings?.sensorList)
+    log.debug "Registering (${settings?.speakerList?.size() ?: 0}) Speakers"
+    registerChangeHandler(settings?.speakerList)
 }
 
 def registerSwitches() {
 //This has to be done at startup because it takes too long for a normal command.
-	log.debug "Registering All Switches"
     state?.devchanges = []
+    log.debug "Registering (${settings?.switchList?.size() ?: 0}) Switches"
 	registerChangeHandler(settings?.switchList)
+    log.debug "Registering (${settings?.lightList?.size() ?: 0}) Lights"
+    registerChangeHandler(settings?.lightList)
+    log.debug "Registering (${settings?.fanList?.size() ?: 0}) Fans"
+    registerChangeHandler(settings?.fanList)
 }
 
 def ignoreTheseAttributes() {

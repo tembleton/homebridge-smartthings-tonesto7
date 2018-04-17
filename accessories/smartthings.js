@@ -70,7 +70,7 @@ function SmartThingsAccessory(platform, device) {
     var thisCharacteristic;
     // platform.log(JSON.stringify(device));
     if (device && device.capabilities) {
-        if (device.capabilities['Switch Level'] !== undefined) {
+        if (device.capabilities['Switch Level'] !== undefined && device.capabilities['Speaker'] === undefined) {
             if (device.commands.levelOpenClose) {
                 // This is a Window Shade
                 that.deviceGroup = 'shades';
@@ -91,7 +91,7 @@ function SmartThingsAccessory(platform, device) {
                     callback(null, parseInt(that.device.attributes.level));
                 });
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
-            } else if ((device.name && device.name.includes(' fan')) || device.commands.lowSpeed) {
+            } else if (device.capabilities['Fan'] || device.commands.lowSpeed) { //Handle Fans with Level or lowSpeed command
                 // This is a Ceiling Fan
                 that.deviceGroup = 'fans';
 
@@ -367,9 +367,45 @@ function SmartThingsAccessory(platform, device) {
         if (device.capabilities['Button'] !== undefined) {
             that.deviceGroup = 'button';
         }
-        if (device.capabilities['Switch'] !== undefined && that.deviceGroup === 'unknown') {
-            that.deviceGroup = 'switch';
-            thisCharacteristic = that.getaddService(Service.Switch).getCharacteristic(Characteristic.On);
+
+        //Defines Speaker Device
+        if (device.capabilities['Speaker'] !== undefined) {
+            // This is a Ceiling Fan
+            that.deviceGroup = 'speakers';
+
+            thisCharacteristic = that.getaddService(Service.Speaker).getCharacteristic(Characteristic.Volume);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, parseInt(that.device.attributes.level || 0));
+            });
+            thisCharacteristic.on('set', function(value, callback) {
+                if (value > 0) {
+                    that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
+                        value1: value
+                    });
+                }
+            });
+            that.platform.addAttributeUsage('volume', that.deviceid, thisCharacteristic);
+
+            thisCharacteristic = that.getaddService(Service.Speaker).getCharacteristic(Characteristic.Mute);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, that.device.attributes.mute === 'muted');
+            });
+            thisCharacteristic.on('set', function(value, callback) {
+                if (value) {
+                    that.platform.api.runCommand(callback, that.deviceid, 'mute');
+                } else {
+                    that.platform.api.runCommand(callback, that.deviceid, 'unmute');
+                }
+            });
+            that.platform.addAttributeUsage('mute', that.deviceid, thisCharacteristic);
+        }
+
+        //Handles Standalone Fan with no levels
+        if (device.capabilities['Fan'] !== undefined && that.deviceGroup === 'unknown') {
+            // This is a Ceiling Fan
+            that.deviceGroup = 'fans';
+
+            thisCharacteristic = that.getaddService(Service.Fan).getCharacteristic(Characteristic.On);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, that.device.attributes.switch === 'on');
             });
@@ -381,21 +417,53 @@ function SmartThingsAccessory(platform, device) {
                 }
             });
             that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
-
-            if (device.capabilities['Switch Level'] !== undefined) {
-                thisCharacteristic = that.getaddService(Service.Lightbulb).getCharacteristic(Characteristic.Brightness);
-                thisCharacteristic.on('get', function(callback) {
-                    callback(null, parseInt(that.device.attributes.level));
-                });
-                thisCharacteristic.on('set', function(value, callback) {
-                    that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
-                        value1: value
-                    });
-                });
-                that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
-            }
         }
 
+        if (device.capabilities['Switch'] !== undefined && that.deviceGroup === 'unknown') {
+            if (device.capabilities['Light'] !== undefined) {
+                that.deviceGroup = 'switch';
+                thisCharacteristic = that.getaddService(Service.Lightbulb).getCharacteristic(Characteristic.On);
+                thisCharacteristic.on('get', function(callback) {
+                    callback(null, that.device.attributes.switch === 'on');
+                });
+                thisCharacteristic.on('set', function(value, callback) {
+                    if (value) {
+                        that.platform.api.runCommand(callback, that.deviceid, 'on');
+                    } else {
+                        that.platform.api.runCommand(callback, that.deviceid, 'off');
+                    }
+                });
+                that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
+            } else {
+                that.deviceGroup = 'switch';
+                thisCharacteristic = that.getaddService(Service.Switch).getCharacteristic(Characteristic.On);
+                thisCharacteristic.on('get', function(callback) {
+                    callback(null, that.device.attributes.switch === 'on');
+                });
+                thisCharacteristic.on('set', function(value, callback) {
+                    if (value) {
+                        that.platform.api.runCommand(callback, that.deviceid, 'on');
+                    } else {
+                        that.platform.api.runCommand(callback, that.deviceid, 'off');
+                    }
+                });
+                that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
+            }
+            // if (device.capabilities['Switch Level'] !== undefined) {
+            //     thisCharacteristic = that.getaddService(Service.Lightbulb).getCharacteristic(Characteristic.Brightness);
+            //     thisCharacteristic.on('get', function(callback) {
+            //         callback(null, parseInt(that.device.attributes.level));
+            //     });
+            //     thisCharacteristic.on('set', function(value, callback) {
+            //         that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
+            //             value1: value
+            //         });
+            //     });
+            //     that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
+            // }
+        }
+
+        // Smoke Detectors
         if (device.capabilities['Smoke Detector'] !== undefined && that.device.attributes.smoke) {
             that.deviceGroup = 'detectors';
 
