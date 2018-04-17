@@ -104,8 +104,8 @@ def renderDevices() {
                 }
             }    
         }
-        if(settings?.addShmDevice != false) { deviceData.push(getShmDevice()) }
     }
+    if(settings?.addShmDevice == true) { deviceData.push(getShmDevice()) }
     return deviceData
 }
 
