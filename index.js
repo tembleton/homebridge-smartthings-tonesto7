@@ -151,6 +151,7 @@ SmartThingsPlatform.prototype = {
             'Momentary',
             'Door Control',
             'Garage Door Control',
+            'Tamper Alert',
             'Relative Humidity Measurement',
             'Presence Sensor',
             'Carbon Dioxide Measurement',
