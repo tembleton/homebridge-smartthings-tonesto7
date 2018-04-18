@@ -123,12 +123,13 @@ SmartThingsPlatform.prototype = {
         // https://github.com/KhaosT/HAP-NodeJS/blob/master/lib/gen/HomeKitTypes.js
 
         var that = this;
-        // var foundAccessories = [];
+        var foundAccessories = [];
         this.deviceLookup = [];
         this.unknownCapabilities = [];
         this.knownCapabilities = [
             'Switch',
             'Light',
+            'LightBulb',
             'Bulb',
             'Color Control',
             'Battery',
@@ -170,7 +171,8 @@ SmartThingsPlatform.prototype = {
             'Thermostat Operating State',
             'Thermostat Heating Setpoint',
             'Thermostat Setpoint',
-            // 'Fan Speed',
+            'Fan Speed',
+            'Fan',
             'Indicator',
             // 'Video Stream',
             // 'Music Player',
