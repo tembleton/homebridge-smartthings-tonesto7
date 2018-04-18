@@ -64,16 +64,14 @@ def mainPage() {
 }
 
 def getDeviceCnt() {
-    def allDevices = []
-    allDevices = allDevices + settings?.deviceList ?: []
-    allDevices = allDevices + settings?.sensorList ?: []
-    allDevices = allDevices + settings?.switchList ?: []
-    allDevices = allDevices + settings?.lightList ?: []
-    allDevices = allDevices + settings?.fanList ?: []
-    allDevices = allDevices + settings?.speakerList ?: []
-    allDevices = allDevices + settings?.irrigationList ?: []
-    state?.deviceCount = allDevices?.unique()?.size() ?: 0
-    return allDevices?.unique()?.size() ?: 0
+    def devices = []
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList"]
+    items?.each { item ->   
+        if(settings[item]?.size() > 0) {     
+            devices = devices + settings[item]
+        }
+    }
+    return devices?.unique()?.size() ?: 0
 }
 
 def getAppEndpointUrl(subPath)	{ return "${apiServerUrl("/api/smartapps/installations/${app.id}${subPath ? "/${subPath}" : ""}?access_token=${atomicState.accessToken}")}" }
@@ -127,19 +125,19 @@ def getShmDevice() {
 }
 
 def findDevice(paramid) {
-	def device = deviceList.find { it.id == paramid }
+	def device = deviceList.find { it?.id == paramid }
   	if (device) return device
-	device = sensorList.find { it.id == paramid }
+	device = sensorList.find { it?.id == paramid }
 	if (device) return device
-  	device = switchList.find { it.id == paramid }
+  	device = switchList.find { it?.id == paramid }
     if (device) return device
-    device = lightList.find { it.id == paramid }
+    device = lightList.find { it?.id == paramid }
     if (device) return device
-    device = fanList.find { it.id == paramid }
+    device = fanList.find { it?.id == paramid }
     if (device) return device
-    device = speakerList.find { it.id == paramid }
+    device = speakerList.find { it?.id == paramid }
     if (device) return device
-    device = irrigationList.find { it.id == paramid }
+    device = irrigationList.find { it?.id == paramid }
 	return device
  }
 //No more individual device group definitions after here.
@@ -195,7 +193,6 @@ def getShmStatus(retInt=false) {
 
 def renderConfig() {
     def configJson = new groovy.json.JsonOutput().toJson([
-        description: "JSON API",
         platforms: [
             [
                 platform: "SmartThings",
