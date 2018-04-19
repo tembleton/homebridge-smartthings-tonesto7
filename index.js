@@ -1,6 +1,5 @@
 var smartthings = require('./lib/smartthingsapi');
 var http = require('http');
-var PubNub = require('pubnub');
 var os = require('os');
 
 var Service, Characteristic, Accessory, uuid, EnergyCharacteristics;
@@ -185,7 +184,9 @@ SmartThingsPlatform.prototype = {
             'Media Track Control',
             'Alarm',
             'Alarm System Status',
-            'Timed Session'
+            'Timed Session',
+            'Mode',
+            'Routine'
         ];
         this.temperature_unit = 'F';
 

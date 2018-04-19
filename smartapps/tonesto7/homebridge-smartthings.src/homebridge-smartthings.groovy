@@ -6,7 +6,7 @@
  */
  
 import groovy.transform.Field
-@Field String appVersion = "1.0.3"
+@Field String appVersion = "1.1.0"
 @Field String appIconUrl = "https://raw.githubusercontent.com/pdlove/homebridge-smartthings/master/smartapps/JSON%401.png"
 
 definition(
@@ -32,15 +32,17 @@ def mainPage() {
         section() {
             paragraph "${app?.name}\nv${appVersion}", image: appIconUrl
         }
+        section() {
+            paragraph title: "NOTICE", "Any Device Changes will require a restart of the Homebridge Service", required: true, state: null
+        }
         section("Select Devices to make available in Homekit") {
-            paragraph title: "NOTICE", "Any Device Changes will require a restart of the Homebridge Service"
             input "sensorList", "capability.sensor", title: "Sensor Devices: (${sensorList ? sensorList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "switchList", "capability.switch", title: "Switch Devices: (${switchList ? switchList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "deviceList", "capability.refresh", title: "Other Devices: (${deviceList ? deviceList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             paragraph "Total Devices: ${getDeviceCnt()}"
         }
         section("Define Categories:") {
-            paragraph "These Categories will add the necessary capabilities to make sure they are recognized by HomeKit as the specific device type"
+            paragraph "These Categories will add the necessary capabilities to make sure they are recognized by HomeKit as the specific device type", state: "complete"
             input "lightList", "capability.switch", title: "Lights: (${lightList ? lightList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "fanList", "capability.switch", title: "Fans: (${fanList ? fanList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "speakerList", "capability.switch", title: "Speakers: (${speakerList ? speakerList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
@@ -49,12 +51,18 @@ def mainPage() {
             paragraph "Notice: \nOnly Tested with Rachio Devices"
 			input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 		}
-        section("Alarm Support (SHM)") {
-            input "addShmDevice", "bool", title: "Enable SHM Alarm\nControl in HomeKit?", required: false, defaultValue: true, submitOnChange: true
+        section("Smart Home Monitor Support (SHM)") {
+            input "addShmDevice", "bool", title: "Allow SHM Control in HomeKit?", required: false, defaultValue: true, submitOnChange: true
+        }
+        section("Create Mode/Routine Devices in HomeKit?") {
+            paragraph title: "What are these for?", "HomeKit will create a switch device for each mode.  The switch will be for active mode.", state: "complete"
+            def modes = location?.modes?.sort{it?.name}?.collect { [(it?.id):it?.name] }
+            input "modeList", "enum", title: "Create Devices for these Modes", required: false, multiple: true, options: modes, submitOnChange: true
+            def routines = location.helloHome?.getPhrases()?.sort { it?.label }?.collect { [(it?.id):it?.label] }
+            input "routineList", "enum", title: "Create Devices for these Routines", required: false, multiple: true, options: routines, submitOnChange: true
         }
         section() {
             href url: getAppEndpointUrl("config"), style: "embedded", required: false, title: "View the Configuration Data for Homebridge", description: "Tap, select, copy, then click \"Done\""
-            href url: getAppEndpointUrl("devices"), style: "embedded", required: false, title: "View Selected Device Data", description: "View Accessory Data (JSON)"
         }
         section() {
         	input "showLogs", "bool", title: "Show Events in Live Logs?", required: false, defaultValue: true, submitOnChange: true
@@ -76,11 +84,40 @@ def getDeviceCnt() {
 
 def getAppEndpointUrl(subPath)	{ return "${apiServerUrl("/api/smartapps/installations/${app.id}${subPath ? "/${subPath}" : ""}?access_token=${atomicState.accessToken}")}" }
 
+def installed() {
+	log.debug "Installed with settings: ${settings}"
+	initialize()
+}
+
+def updated() {
+	log.debug "Updated with settings: ${settings}"
+	unsubscribe()
+	initialize()
+}
+
+def initialize() {
+	if(!state?.accessToken) {
+        createAccessToken()
+    }
+	runIn(2, "registerDevices", [overwrite: true])
+   	runIn(4, "registerSensors", [overwrite: true])
+    runIn(6, "registerSwitches", [overwrite: true])
+	state?.subscriptionRenewed = 0
+    subscribe(location, null, HubResponseEvent, [filterEvents:false])
+    if(settings?.addShmDevice) { subscribe(location, "alarmSystemStatus", changeHandler) }
+    if(settings?.modeList) { 
+        subscribe(location, "mode", changeHandler)
+        if(state.lastMode == null) { state?.lastMode = location.mode?.toString() }
+    }
+    if(settings?.routineList) { subscribe(location, "routineExecuted", changeHandler) }
+}
+
 def renderDevices() {
     def deviceData = []
     def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList"]
+    def virtItems = ["modeList"]
     items?.each { item ->   
-        if(settings[item]?.size()) {     
+        if(settings[item]?.size()) {
             settings[item]?.each { dev->
                 try {
                     deviceData?.push([
@@ -97,14 +134,52 @@ def renderDevices() {
                         commands: deviceCommandList(dev), 
                         attributes: deviceAttributeList(dev)
                     ])
+                    // log.debug "${deviceCommandList(dev)}"
                 } catch (e) {
-                    log.error("Error Occurred Parsing Device ${dev?.displayName}, Error " + e)
+                    log.error("Error Occurred Parsing Device ${dev?.displayName}, Error " + e.message)
                 }
             }    
         }
     }
+
+    virtItems?.each { item ->   
+        if(settings[item]?.size()) {
+            settings[item]?.each { vDev->
+                def isRoutine = (item == "routineList")
+                def obj = isRoutine ? getRoutineById(vDev) : getModeById(vDev)
+                if(!obj) { return }
+                def name = isRoutine ? obj?.label : obj?.name
+                def type = isRoutine ? "Routine" : "Mode"
+                def attrVal = isRoutine ? "off" : modeSwitchState(obj?.name)
+                try {
+                    deviceData?.push([
+                        name: name,
+                        basename: name,
+                        deviceid: vDev, 
+                        status: "Online",
+                        manufacturerName: "SmartThings",
+                        modelName: "${type} Device",
+                        serialNumber: "${type}",
+                        firmwareVersion: "1.0.0",
+                        lastTime: now(),
+                        capabilities: ["${type}": 1], 
+                        commands: [on:[]], 
+                        attributes: ["switch": attrVal]
+                    ])
+                } catch (e) {
+                    log.error("Error Occurred Parsing ${item} ${type} ${name}, Error " + e.message)
+                }
+            }    
+        }
+    }
+
     if(settings?.addShmDevice == true) { deviceData.push(getShmDevice()) }
     return deviceData
+}
+
+def modeSwitchState(mode) {
+	// log.trace "modeSwitchState(${mode} | ${location.mode.toString() == mode ? "on" : "off"})"
+    return location.mode.toString() == mode ? "on" : "off"
 }
 
 def getShmDevice() {
@@ -140,32 +215,6 @@ def findDevice(paramid) {
     device = irrigationList.find { it?.id == paramid }
 	return device
  }
-//No more individual device group definitions after here.
-
-
-def installed() {
-	log.debug "Installed with settings: ${settings}"
-	initialize()
-}
-
-def updated() {
-	log.debug "Updated with settings: ${settings}"
-	unsubscribe()
-	initialize()
-}
-
-def initialize() {
-	if(!state?.accessToken) {
-        createAccessToken()
-    }
-	runIn(2, "registerDevices", [overwrite: true])
-   	runIn(4, "registerSensors", [overwrite: true])
-    runIn(6, "registerSwitches", [overwrite: true])
-    // runIn(8, "registerOthers", [overwrite: true])
-	state?.subscriptionRenewed = 0
-    subscribe(location, null, HubResponseEvent, [filterEvents:false])
-    if(settings?.addShmDevice) { subscribe(location, "alarmSystemStatus", changeHandler) }
-}
 
 def authError() {
     return [error: "Permission denied"]
@@ -222,12 +271,7 @@ def renderLocation() {
 }
 
 def CommandReply(statusOut, messageOut) {
-	def replyData = [
-        status: statusOut,
-        message: messageOut
-    ]
-
-    def replyJson    = new groovy.json.JsonOutput().toJson(replyData)
+    def replyJson = new groovy.json.JsonOutput().toJson([status: statusOut, message: messageOut])
     render contentType: "application/json", data: replyJson
 }
 
@@ -238,6 +282,15 @@ def deviceCommand() {
     if(settings?.addShmDevice != false && params?.id == "alarmSystemStatus") {
         setShmMode(command)
         CommandReply("Success", "Security Alarm, Command $command")
+    } else if (settings?.modeList && command == "mode") {
+        def value1 = request.JSON?.value1
+        log.debug "value1: ${value1}"
+        if(value1) { changeMode(value1) }
+        CommandReply("Success", "Mode Device, Command $command")
+    } else if (settings?.routineList && command == "routine") {
+        def value1 = request.JSON?.value1
+        if(value1) { runRoutine(value1) }
+        CommandReply("Success", "Routine Device, Command $command")
     } else {
         if (!device) {
             log.error("Device Not Found")
@@ -267,7 +320,23 @@ def deviceCommand() {
 }
 
 def setShmMode(mode) {
+    log.info "Setting the Smart Home Monitor Mode to (${mode})..."
     sendLocationEvent(name: 'alarmSystemStatus', value: mode.toString())
+}
+
+def changeMode(mode) {
+    if(mode) {
+        log.info "Setting the Location Mode to (${mode})..."
+        setLocationMode(mode)
+        state.lastMode = mode
+    }
+}
+
+def runRoutine(rt) {
+    if(rt) {
+        log.info "Executing the (${rt}) Routine..."
+        location.helloHome?.execute(rt)
+    }
 }
 
 def deviceAttribute() {
@@ -281,11 +350,47 @@ def deviceAttribute() {
   	}
 }
 
+def findVirtModeDevice(id) {
+    if(getModeById(id)) {
+        return getModeById(id)
+    } 
+    return null
+}
+
+def findVirtRoutineDevice(id) {
+    if (getRoutineById(id)) {
+        return getRoutineById(id)
+    }
+    return null
+}
+
 def deviceQuery() {
-	def device = findDevice(params.id)
+    log.trace "deviceQuery(${params?.id}"
+	def device = findDevice(params?.id)
     if (!device) { 
-    	device = null
-        httpError(404, "Device not found")
+        def mode = findVirtModeDevice(params?.id)
+        def routine = findVirtModeDevice(params?.id)
+        def obj = mode ? mode : routine ?: null
+        if(!obj) { 
+            device = null
+            httpError(404, "Device not found")
+        } else {
+            def name = routine ? obj?.label : obj?.name
+            def type = routine ? "Routine" : "Mode"
+            def attrVal = routine ? "off" : modeSwitchState(obj?.name)
+            try {
+                deviceData?.push([
+                    name: name,
+                    deviceid: params?.id, 
+                    capabilities: ["${type}": 1], 
+                    commands: [on:[]], 
+                    attributes: ["switch": attrVal]
+                ])
+            } catch (e) {
+                log.error("Error Occurred Parsing ${item} ${type} ${name}, Error " + e.message)
+            }
+        }
+    	
     } 
     
     if (result) {
@@ -337,37 +442,15 @@ def deviceAttributeList(device) {
 }
 
 def getAllData() {
-	//Since we're about to send all of the data, we'll count this as a subscription renewal and clear out pending changes.
-	state?.subscriptionRenewed = now()
+    state?.subscriptionRenewed = now()
     state?.devchanges = []
-    
-    def deviceData = [	
-        location: renderLocation(),
-        deviceList: renderDevices() 
-    ]
+	def deviceData = [location: renderLocation(), deviceList: renderDevices()]
     def deviceJson = new groovy.json.JsonOutput().toJson(deviceData)
     render contentType: "application/json", data: deviceJson
 }
 
-def startSubscription() {
-//This simply registers the subscription.
-    state?.subscriptionRenewed = now()
-	def deviceJson = new groovy.json.JsonOutput().toJson([status: "Success"])
-    render contentType: "application/json", data: deviceJson    
-}
-
-def endSubscription() {
-//Because it takes too long to register for an api command, we don't actually unregister.
-//We simply blank the devchanges and change the subscription renewal to two hours ago.
-	state?.devchanges = []
-    state?.subscriptionRenewed = 0
- 	def deviceJson = new groovy.json.JsonOutput().toJson([status: "Success"])
-    render contentType: "application/json", data: deviceJson     
-}
-
 def registerDevices() {
 //This has to be done at startup because it takes too long for a normal command.
-    state?.devchanges = []
     log.debug "Registering (${settings?.deviceList?.size() ?: 0}) Other Devices"
 	registerChangeHandler(settings?.deviceList)
     log.debug "Registering (${settings?.irrigationList?.size() ?: 0}) Sprinklers"
@@ -376,7 +459,6 @@ def registerDevices() {
 
 def registerSensors() {
 //This has to be done at startup because it takes too long for a normal command.
-    state?.devchanges = []
     log.debug "Registering (${settings?.sensorList?.size() ?: 0}) Sensors"
     registerChangeHandler(settings?.sensorList)
     log.debug "Registering (${settings?.speakerList?.size() ?: 0}) Speakers"
@@ -385,7 +467,6 @@ def registerSensors() {
 
 def registerSwitches() {
 //This has to be done at startup because it takes too long for a normal command.
-    state?.devchanges = []
     log.debug "Registering (${settings?.switchList?.size() ?: 0}) Switches"
 	registerChangeHandler(settings?.switchList)
     log.debug "Registering (${settings?.lightList?.size() ?: 0}) Lights"
@@ -419,61 +500,84 @@ def registerChangeHandler(devices, showlog=false) {
 }
 
 def changeHandler(evt) {
-    def device = evt?.name == 'alarmSystemStatus' ? evt.name : evt.deviceId
-	if (state?.directIP!="") {
-    	//Send Using the Direct Mechanism
-        if(settings?.showLogs) {
-            log.debug "Sending${" ${evt?.source}" ?: ""} Event (${evt?.name.toUpperCase()}: ${evt?.value}${evt?.unit ?: ""}) to Homebridge at (${state?.directIP}:${state?.directPort})"
-        }
-        def result = new physicalgraph.device.HubAction(
-    		method: "POST",
-    		path: "/update",
-    		headers: [
-        		HOST: "${state?.directIP}:${state?.directPort}",
-                'Content-Type': 'application/json'
-    		],
-            body: [
-                change_device: device,
-                change_attribute: evt.name,
-                change_value: evt.value,
-                change_date: evt.date
-            ]
-		)
-        sendHubCommand(result)
-    }
+    def sendItems = []
+    def sendNum = 1
+    def src = evt?.source
+    def deviceid = evt?.deviceId
+    def deviceName = evt?.displayName
+    def attr = evt?.name
+    def value = evt?.value
+    def dt = evt?.date
+    def sendEvt = true
     
-	//Only add to the state's devchanges if the endpoint has renewed in the last 10 minutes.
-    if (state?.subscriptionRenewed>(now()-(1000*60*10))) {
-  		if (evt.isStateChange()) {
-			state?.devchanges << [device: device, attribute: evt.name, value: evt.value, date: evt.date]
-      }
-    } else if (state?.subscriptionRenewed>0) { //Otherwise, clear it
-    	log.debug "Endpoint Subscription Expired. No longer storing changes for devices."
-        state?.devchanges=[]
-        state?.subscriptionRenewed=0
+    switch(evt?.name) {
+        case "alarmSystemStatus":
+            deviceid = evt?.name
+            state?.alarmSystemStatus = value
+            sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: value, evtUnit: evt?.unit ?: "", evtDate: dt])
+            break
+        case "mode":
+            settings?.modeList?.each { id->
+                def md = getModeById(id)
+                if(md && md?.id ) { sendItems?.push([evtSource: "MODE", evtDeviceName: md?.name, evtDeviceId: md?.id, evtAttr: "switch", evtValue: modeSwitchState(md?.name), evtUnit: "", evtDate: dt]) }
+            }
+            break
+        case "routineExecuted":
+            settings?.routineList?.each { id->
+                def rt = getRoutineById(id)
+                if(rt && rt?.id ) { sendItems?.push([evtSource: "ROUTINE", evtDeviceName: rt?.label, evtDeviceId: rt?.id, evtAttr: "switch", evtValue: "off", evtUnit: "", evtDate: dt]) } 
+            }
+            break
+        default:
+            sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: value, evtUnit: evt?.unit ?: "", evtDate: dt])
+            break
     }
+    if (sendEvt && state?.directIP != "" && sendItems?.size()) {
+    	//Send Using the Direct Mechanism
+        sendItems?.each { send->
+            if(settings?.showLogs) { 
+                log.debug "Sending${" ${send?.evtSource}" ?: ""} Event (${send?.evtDeviceName} | ${send?.evtAttr.toUpperCase()}: ${send?.evtValue}${send?.evtUnit}) to Homebridge at (${state?.directIP}:${state?.directPort})" 
+            }
+            def result = new physicalgraph.device.HubAction(
+                method: "POST",
+                path: "/update",
+                headers: [
+                    HOST: "${state?.directIP}:${state?.directPort}",
+                    'Content-Type': 'application/json'
+                ],
+                body: [
+                    change_device: send?.evtDeviceId,
+                    change_attribute: send?.evtAttr,
+                    change_value: send?.evtValue,
+                    change_date: send?.evtDate
+                ]
+            )
+            sendHubCommand(result)
+        }
+    }
+}
+
+
+def getModeById(mId) {
+    return location?.getModes()?.find{it?.id == mId}
+}
+
+def getRoutineById(rId) {
+    return location?.helloHome?.getPhrases()?.find{it?.id == rId}
+}
+
+def getModeByName(name) {
+    return location?.getModes()?.find{it?.name == name}
+}
+
+def getRoutineByName(name) {
+    return location?.helloHome?.getPhrases()?.find{it?.label == name}
 }
 
 def getShmIncidents() {
     //Thanks Adrian
     def incidentThreshold = now() - 604800000
     return location.activeIncidents.collect{[date: it?.date?.time, title: it?.getTitle(), message: it?.getMessage(), args: it?.getMessageArgs(), sourceType: it?.getSourceType()]}.findAll{ it?.date >= incidentThreshold } ?: null
-}
-
-def getChangeEvents() {
-    //Store the changes so we can swap it out very quickly and eliminate the possibility of losing any.
-    //This is mainly to make this thread safe because I'm willing to bet that a change event can fire
-    //while generating/sending the JSON.
-    def oldchanges = state?.devchanges
-    state?.devchanges=[]
-    state?.subscriptionRenewed = now()
-	if (oldchanges.size()==0) {
-        def deviceJson = new groovy.json.JsonOutput().toJson([status: "None"])
-	    render contentType: "application/json", data: deviceJson    
-    } else {
-    	def changeJson = new groovy.json.JsonOutput().toJson([status: "Success", attributes:oldchanges])
-    	render contentType: "application/json", data: changeJson
-	}
 }
 
 def enableDirectUpdates() {
@@ -507,43 +611,26 @@ def locationHandler(evt) {
     }
 }
 
-def getSubscriptionService() {
-	def replyData = [
-        pubnub_publishkey: pubnubPublishKey,
-        pubnub_subscribekey: pubnubSubscribeKey,
-        pubnub_channel: subChannel
-    ]
-
-    def replyJson = new groovy.json.JsonOutput().toJson(replyData)
-    render contentType: "application/json", data: replyJson
-}
-
 mappings {
     if (!params.access_token || (params.access_token && params.access_token != state?.accessToken)) {
         path("/devices")                        { action: [GET: "authError"] }
-        path("/config")                          { action: [GET: "authError"] }
+        path("/config")                         { action: [GET: "authError"] }
         path("/location")                       { action: [GET: "authError"] }
         path("/:id/command/:command")     		{ action: [POST: "authError"] }
         path("/:id/query")						{ action: [GET: "authError"] }
         path("/:id/attribute/:attribute") 		{ action: [GET: "authError"] }
-        path("/subscribe")                      { action: [GET: "authError"] }
         path("/getUpdates")                     { action: [GET: "authError"] }
-        path("/unsubscribe")                    { action: [GET: "authError"] }
         path("/startDirect/:ip/:port")          { action: [GET: "authError"] }
-        path("/getSubcriptionService")          { action: [GET: "authError"] }
 
     } else {
         path("/devices")                        { action: [GET: "getAllData"] }
-        path("/config")                          { action: [GET: "renderConfig"]  }
+        path("/config")                         { action: [GET: "renderConfig"]  }
         path("/location")                       { action: [GET: "renderLocation"] }
         path("/:id/command/:command")     		{ action: [POST: "deviceCommand"] }
         path("/:id/query")						{ action: [GET: "deviceQuery"] }
         path("/:id/attribute/:attribute") 		{ action: [GET: "deviceAttribute"] }
-        path("/subscribe")                      { action: [GET: "startSubscription"] }
         path("/getUpdates")                     { action: [GET: "getChangeEvents"] }
-        path("/unsubscribe")                    { action: [GET: "endSubscription"] }
         path("/startDirect/:ip/:port")          { action: [GET: "enableDirectUpdates"] }
-        path("/getSubcriptionService")          { action: [GET: "getSubscriptionService"] }
     }
 }
 

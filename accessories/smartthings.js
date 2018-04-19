@@ -416,6 +416,39 @@ function SmartThingsAccessory(platform, device) {
             }
         }
 
+        if (device.capabilities['Mode'] !== undefined) {
+            that.deviceGroup = 'mode';
+            that.platform.log('Mode: (' + that.name + ')');
+            thisCharacteristic = that.getaddService(Service.Switch).getCharacteristic(Characteristic.On);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, that.device.attributes.switch === 'on');
+            });
+            thisCharacteristic.on('set', function(value, callback) {
+                if (value && that.device.attributes.switch === 'off') {
+                    that.platform.api.runCommand(callback, that.deviceid, 'mode', {
+                        value1: that.name.toString()
+                    });
+                }
+            });
+            that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
+        }
+
+        if (device.capabilities['Routine'] !== undefined) {
+            that.deviceGroup = 'routine';
+            thisCharacteristic = that.getaddService(Service.Switch).getCharacteristic(Characteristic.On);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, that.device.attributes.switch === 'on');
+            });
+            thisCharacteristic.on('set', function(value, callback) {
+                if (value && that.device.attributes.switch === 'off') {
+                    that.platform.api.runCommand(callback, that.deviceid, 'routine', {
+                        value1: '"' + that.name + '"'
+                    });
+                }
+            });
+            that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
+        }
+
         if (device.capabilities['Switch'] !== undefined && that.deviceGroup === 'unknown') {
             //Handles Standalone Fan with no levels
             if (isLight === true) {
@@ -930,19 +963,18 @@ function SmartThingsAccessory(platform, device) {
             that.deviceGroup = 'alarm';
             thisCharacteristic = that.getaddService(Service.SecuritySystem).getCharacteristic(Characteristic.SecuritySystemCurrentState);
             thisCharacteristic.on('get', function(callback) {
-                that.platform.log(that.deviceid + ' check 1: ' + that.device.attributes.alarmSystemStatus);
-
+                // that.platform.log(that.deviceid + ' check 1: ' + that.device.attributes.alarmSystemStatus);
                 callback(null, convertAlarmState(that.device.attributes.alarmSystemStatus.toLowerCase(), true));
             });
             that.platform.addAttributeUsage('alarmSystemStatus', that.deviceid, thisCharacteristic);
 
             thisCharacteristic = that.getaddService(Service.SecuritySystem).getCharacteristic(Characteristic.SecuritySystemTargetState);
             thisCharacteristic.on('get', function(callback) {
-                that.platform.log(that.deviceid + ' check 2: ' + that.device.attributes.alarmSystemStatus);
+                // that.platform.log(that.deviceid + ' check 2: ' + that.device.attributes.alarmSystemStatus);
                 callback(null, convertAlarmState(that.device.attributes.alarmSystemStatus.toLowerCase(), true));
             });
             thisCharacteristic.on('set', function(value, callback) {
-                that.platform.log(that.deviceid + ' set value : ' + value);
+                // that.platform.log(that.deviceid + ' set value : ' + value);
                 let val = convertAlarmState(value);
                 that.platform.api.runCommand(callback, 'alarmSystemStatus', val);
 
@@ -950,6 +982,7 @@ function SmartThingsAccessory(platform, device) {
             });
             that.platform.addAttributeUsage('alarmSystemStatus', that.deviceid, thisCharacteristic);
         }
+
         if (device.capabilities['Air Quality Sensor'] !== undefined) {
             that.deviceGroup = 'airquality';
             thisCharacteristic = that.getaddService(Service.AirQualitySensor).getCharacteristic(Characteristic.AirQuality);
