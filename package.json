@@ -1,7 +1,7 @@
 {
     "name": "homebridge-smartthings-tonesto7",
     "description": "HomeBridge plugin for SmartThings",
-    "version": "1.0.6",
+    "version": "1.1.0",
     "license": "ISC",
     "preferGlobal": true,
     "keywords": [
