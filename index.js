@@ -171,6 +171,7 @@ SmartThingsPlatform.prototype = {
             'Thermostat Heating Setpoint',
             'Thermostat Setpoint',
             'Fan Speed',
+            'FanAndLight',
             'Fan',
             'Indicator',
             // 'Video Stream',
@@ -186,7 +187,8 @@ SmartThingsPlatform.prototype = {
             'Alarm System Status',
             'Timed Session',
             'Mode',
-            'Routine'
+            'Routine',
+            'Button'
         ];
         this.temperature_unit = 'F';
 
@@ -299,7 +301,7 @@ function smartthings_HandleHTTPResponse(request, response, mySmartThings) {
                     value: data.change_value,
                     date: data.change_date
                 };
-                mySmartThings.log('Change Event:', '(' + data.change_device + ') [' + (data.change_attribute ? data.change_attribute.toUpperCase() : 'unknown') + '] is ' + data.change_value);
+                mySmartThings.log('Change Event:', '(' + data.change_name + ') [' + (data.change_attribute ? data.change_attribute.toUpperCase() : 'unknown') + '] is ' + data.change_value);
                 mySmartThings.processFieldUpdate(newChange, mySmartThings);
             }
         });

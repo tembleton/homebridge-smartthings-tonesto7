@@ -35,13 +35,7 @@ def mainPage() {
         section() {
             paragraph title: "NOTICE", "Any Device Changes will require a restart of the Homebridge Service", required: true, state: null
         }
-        section("Select Devices to make available in Homekit") {
-            input "sensorList", "capability.sensor", title: "Sensor Devices: (${sensorList ? sensorList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
-            input "switchList", "capability.switch", title: "Switch Devices: (${switchList ? switchList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
-            input "deviceList", "capability.refresh", title: "Other Devices: (${deviceList ? deviceList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
-            paragraph "Total Devices: ${getDeviceCnt()}"
-        }
-        section("Define Categories:") {
+        section("Define Specific Categories:") {
             paragraph "These Categories will add the necessary capabilities to make sure they are recognized by HomeKit as the specific device type", state: "complete"
             input "lightList", "capability.switch", title: "Lights: (${lightList ? lightList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "fanList", "capability.switch", title: "Fans: (${fanList ? fanList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
@@ -51,15 +45,37 @@ def mainPage() {
             paragraph "Notice: \nOnly Tested with Rachio Devices"
 			input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 		}
-        section("Smart Home Monitor Support (SHM)") {
-            input "addShmDevice", "bool", title: "Allow SHM Control in HomeKit?", required: false, defaultValue: true, submitOnChange: true
+        // section("Fan/Light Combo Devices:") {
+		// 	input "hunterFanLightList", "capability.switch", title: "Hunter Fan/Light Devices (${hunterFanList ? hunterFanList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+		// }
+        section("All Other Devices:") {
+            input "sensorList", "capability.sensor", title: "Sensor Devices: (${sensorList ? sensorList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+            input "switchList", "capability.switch", title: "Switch Devices: (${switchList ? switchList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+            input "deviceList", "capability.refresh", title: "Other Devices: (${deviceList ? deviceList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
         }
+        
+        section("Irrigation Devices:") {
+            paragraph "Notice: \nOnly Tested with Rachio Devices"
+			input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+		}
+        section("Create Devices that Simulate Buttons in HomeKit?") {
+            paragraph title: "Description:", "HomeKit will create a switch device for each item selected.  The switch will change state to off after it fires.", state: "complete"
+            input "buttonList", "capability.button", title: "Select Buttons Devices:  (${buttonList ? buttonList?.size() : 0} Selected)", required: false, multiple: true, submitOnChange: true
+            input "momentaryList", "capability.momentary", title: "Select Momentary Devices:  (${momentaryList ? momentaryList?.size() : 0} Selected)", required: false, multiple: true, submitOnChange: true
+        }
+        section() {
+            paragraph title: "Device Counts:", "Total Devices: ${getDeviceCnt()}"
+        }
+        
         section("Create Mode/Routine Devices in HomeKit?") {
-            paragraph title: "What are these for?", "HomeKit will create a switch device for each mode.  The switch will be for active mode.", state: "complete"
+            paragraph title: "What are these for?", "HomeKit will create a switch device for each mode.  The switch will be ON for the active mode.", state: "complete"
             def modes = location?.modes?.sort{it?.name}?.collect { [(it?.id):it?.name] }
             input "modeList", "enum", title: "Create Devices for these Modes", required: false, multiple: true, options: modes, submitOnChange: true
             def routines = location.helloHome?.getPhrases()?.sort { it?.label }?.collect { [(it?.id):it?.label] }
             input "routineList", "enum", title: "Create Devices for these Routines", required: false, multiple: true, options: routines, submitOnChange: true
+        }
+        section("Smart Home Monitor Support (SHM)") {
+            input "addShmDevice", "bool", title: "Allow SHM Control in HomeKit?", required: false, defaultValue: true, submitOnChange: true
         }
         section() {
             href url: getAppEndpointUrl("config"), style: "embedded", required: false, title: "View the Configuration Data for Homebridge", description: "Tap, select, copy, then click \"Done\""
@@ -73,7 +89,7 @@ def mainPage() {
 
 def getDeviceCnt() {
     def devices = []
-    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList"]
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "hunterFanLightList"]
     items?.each { item ->   
         if(settings[item]?.size() > 0) {     
             devices = devices + settings[item]
@@ -114,67 +130,80 @@ def initialize() {
 
 def renderDevices() {
     def deviceData = []
-    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList"]
-    def virtItems = ["modeList"]
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "hunterFanLightList", "modeList", "momentaryList", "buttonList"]
     items?.each { item ->   
         if(settings[item]?.size()) {
             settings[item]?.each { dev->
                 try {
-                    deviceData?.push([
-                        name: dev?.displayName,
-                        basename: dev?.name,
-                        deviceid: dev?.id, 
-                        status: dev?.status,
-                        manufacturerName: dev?.getManufacturerName() ?: "SmartThings",
-                        modelName: dev?.getModelName() ?: dev?.getTypeName(),
-                        serialNumber: dev?.getDeviceNetworkId(),
-                        firmwareVersion: "1.0.0",
-                        lastTime: dev?.getLastActivity(),
-                        capabilities: deviceCapabilityList(dev), 
-                        commands: deviceCommandList(dev), 
-                        attributes: deviceAttributeList(dev)
-                    ])
-                    // log.debug "${deviceCommandList(dev)}"
+                    def dData = getDeviceData(item, dev)
+                    if(dData && dData?.size()) { deviceData?.push(dData) }
                 } catch (e) {
                     log.error("Error Occurred Parsing Device ${dev?.displayName}, Error " + e.message)
                 }
             }    
         }
     }
-
-    virtItems?.each { item ->   
-        if(settings[item]?.size()) {
-            settings[item]?.each { vDev->
-                def isRoutine = (item == "routineList")
-                def obj = isRoutine ? getRoutineById(vDev) : getModeById(vDev)
-                if(!obj) { return }
-                def name = isRoutine ? obj?.label : obj?.name
-                def type = isRoutine ? "Routine" : "Mode"
-                def attrVal = isRoutine ? "off" : modeSwitchState(obj?.name)
-                try {
-                    deviceData?.push([
-                        name: name,
-                        basename: name,
-                        deviceid: vDev, 
-                        status: "Online",
-                        manufacturerName: "SmartThings",
-                        modelName: "${type} Device",
-                        serialNumber: "${type}",
-                        firmwareVersion: "1.0.0",
-                        lastTime: now(),
-                        capabilities: ["${type}": 1], 
-                        commands: [on:[]], 
-                        attributes: ["switch": attrVal]
-                    ])
-                } catch (e) {
-                    log.error("Error Occurred Parsing ${item} ${type} ${name}, Error " + e.message)
-                }
-            }    
-        }
-    }
-
     if(settings?.addShmDevice == true) { deviceData.push(getShmDevice()) }
     return deviceData
+}
+
+def getDeviceData(type, sItem) {
+    def curType = null
+    def devId = sItem
+    def obj = null
+    def name = null
+    def attrVal = null
+    def isVirtual = false
+    switch(type) {
+        case "routineList":
+            isVirtual = true
+            curType = "Routine"
+            obj = getRoutineById(sItem)
+            if(obj) {
+                name = obj?.label
+                attrVal = "off"
+            }
+            break
+        case "modeList":
+            isVirtual = true
+            curType = "Mode"
+            obj = getModeById(sItem)
+            if(obj) {
+                name = obj?.name
+                attrVal = modeSwitchState(obj?.name)
+            }
+            break
+        case "momentaryList":
+        case "buttonList":
+            isVirtual = true
+            curType = "Button"
+            obj = sItem
+            if(obj) {
+                name = obj?.displayName
+                attrVal = "off"
+            }
+            break
+        default:
+            curType = "device"
+            obj = sItem
+            break
+    }
+    if(curType && obj) {
+        return [
+            name: !isVirtual ? sItem?.displayName : name,
+            basename:  !isVirtual ? sItem?.name : name,
+            deviceid: !isVirtual ? sItem?.id : devId,
+            status: !isVirtual ? sItem?.status : "Online",
+            manufacturerName: !isVirtual ? sItem?.getManufacturerName() : "SmartThings",
+            modelName: !isVirtual ? (sItem?.getModelName() ?: sItem?.getTypeName()) : "${type} Device",
+            serialNumber: !isVirtual ? sItem?.getDeviceNetworkId() : "${type}",
+            firmwareVersion: "1.0.0",
+            lastTime: !isVirtual ? sItem?.getLastActivity() : now(),
+            capabilities: !isVirtual ? deviceCapabilityList(sItem) : ["${type}": 1], 
+            commands: !isVirtual ? deviceCommandList(sItem) : [on:[]], 
+            attributes: !isVirtual ? deviceAttributeList(sItem) : ["switch": attrVal]
+        ]
+    } else { return null }
 }
 
 def modeSwitchState(mode) {
@@ -213,6 +242,12 @@ def findDevice(paramid) {
     device = speakerList.find { it?.id == paramid }
     if (device) return device
     device = irrigationList.find { it?.id == paramid }
+    if (device) return device
+    device = momentaryList.find { it?.id == paramid }
+    if (device) return device
+    device = buttonList.find { it?.id == paramid }
+    if (device) return device
+    device = hunterFanLightList.find { it?.id == paramid }
 	return device
  }
 
@@ -277,8 +312,8 @@ def CommandReply(statusOut, messageOut) {
 
 def deviceCommand() {
 	log.info("Command Request: $params")
-	def device = findDevice(params.id)    
-    def command = params.command
+	def device = findDevice(params?.id)    
+    def command = params?.command
     if(settings?.addShmDevice != false && params?.id == "alarmSystemStatus") {
         setShmMode(command)
         CommandReply("Success", "Security Alarm, Command $command")
@@ -291,6 +326,9 @@ def deviceCommand() {
         def value1 = request.JSON?.value1
         if(value1) { runRoutine(value1) }
         CommandReply("Success", "Routine Device, Command $command")
+    } else if ((settings?.buttonList || settings?.momentaryList) && command == "button") {
+        device.on()
+        CommandReply("Success", "Button Device, Command ON")
     } else {
         if (!device) {
             log.error("Device Not Found")
@@ -420,6 +458,11 @@ def deviceCapabilityList(device) {
     if(settings?.speakerList.find { it?.id == device?.id }) {
         items["Speaker"] = 1
     }
+    if(settings?.hunterFanLightList.find { it?.id == device?.id }) {
+        items["FanAndLight"] = 1
+        items["LightBulb"] = 1
+        items["Fan"] = 1
+    }
 	return items
 }
 
@@ -463,6 +506,8 @@ def registerSensors() {
     registerChangeHandler(settings?.sensorList)
     log.debug "Registering (${settings?.speakerList?.size() ?: 0}) Speakers"
     registerChangeHandler(settings?.speakerList)
+    log.debug "Registering (${settings?.hunterFanLightList?.size() ?: 0}) FanLights"
+    registerChangeHandler(settings?.hunterFanLightList)
 }
 
 def registerSwitches() {
@@ -546,6 +591,7 @@ def changeHandler(evt) {
                     'Content-Type': 'application/json'
                 ],
                 body: [
+                    change_name: send?.evtDeviceName,
                     change_device: send?.evtDeviceId,
                     change_attribute: send?.evtAttr,
                     change_value: send?.evtValue,

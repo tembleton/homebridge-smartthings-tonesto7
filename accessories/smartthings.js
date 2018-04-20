@@ -341,10 +341,6 @@ function SmartThingsAccessory(platform, device) {
             }
         }
 
-        if (device.capabilities['Button'] !== undefined) {
-            that.deviceGroup = 'button';
-        }
-
         //Defines Speaker Device
         if (isSpeaker === true) {
             that.deviceGroup = 'speakers';
@@ -428,6 +424,21 @@ function SmartThingsAccessory(platform, device) {
                     that.platform.api.runCommand(callback, that.deviceid, 'mode', {
                         value1: that.name.toString()
                     });
+                }
+            });
+            that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
+        }
+
+        if (device.capabilities['Button'] !== undefined) {
+            that.deviceGroup = 'button';
+            that.platform.log('Button: (' + that.name + ')');
+            thisCharacteristic = that.getaddService(Service.Switch).getCharacteristic(Characteristic.On);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, that.device.attributes.switch === 'on');
+            });
+            thisCharacteristic.on('set', function(value, callback) {
+                if (value && that.device.attributes.switch === 'off') {
+                    that.platform.api.runCommand(callback, that.deviceid, 'button');
                 }
             });
             that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
