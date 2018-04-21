@@ -4,7 +4,8 @@ var Accessory,
     Service,
     Characteristic,
     uuid,
-    EnergyCharacteristics;
+    customCharacteristics,
+    customServices;
 
 /*
  *   SmartThings Accessory
@@ -15,8 +16,8 @@ module.exports = function(oAccessory, oService, oCharacteristic, ouuid) {
         Accessory = oAccessory;
         Service = oService;
         Characteristic = oCharacteristic;
-        EnergyCharacteristics = require('../lib/customCharacteristics').EnergyCharacteristics(Characteristic);
-
+        customCharacteristics = require('../lib/communityCharacteristics').customCharacteristics(Characteristic);
+        customServices = require('../lib/communityServices').customServices(Service);
         uuid = ouuid;
 
         inherits(SmartThingsAccessory, Accessory);
@@ -727,7 +728,7 @@ function SmartThingsAccessory(platform, device) {
 
         if (device.capabilities['Energy Meter'] !== undefined) {
             that.deviceGroup = 'EnergyMeter';
-            thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(EnergyCharacteristics.TotalConsumption1);
+            thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(customCharacteristics.TotalConsumption1);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, Math.round(that.device.attributes.energy));
             });
@@ -735,7 +736,7 @@ function SmartThingsAccessory(platform, device) {
         }
 
         if (device.capabilities['Power Meter'] !== undefined) {
-            thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(EnergyCharacteristics.CurrentConsumption1);
+            thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(customCharacteristics.CurrentConsumption1);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, Math.round(that.device.attributes.power));
             });

@@ -53,16 +53,11 @@ def mainPage() {
             input "switchList", "capability.switch", title: "Switch Devices: (${switchList ? switchList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "deviceList", "capability.refresh", title: "Other Devices: (${deviceList ? deviceList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
         }
-        
-        section("Irrigation Devices:") {
-            paragraph "Notice: \nOnly Tested with Rachio Devices"
-			input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
-		}
-        section("Create Devices that Simulate Buttons in HomeKit?") {
-            paragraph title: "Description:", "HomeKit will create a switch device for each item selected.  The switch will change state to off after it fires.", state: "complete"
-            input "buttonList", "capability.button", title: "Select Buttons Devices:  (${buttonList ? buttonList?.size() : 0} Selected)", required: false, multiple: true, submitOnChange: true
-            input "momentaryList", "capability.momentary", title: "Select Momentary Devices:  (${momentaryList ? momentaryList?.size() : 0} Selected)", required: false, multiple: true, submitOnChange: true
-        }
+        // section("Create Devices that Simulate Buttons in HomeKit?") {
+        //     paragraph title: "Description:", "HomeKit will create a switch device for each item selected.  The switch will change state to off after it fires.", state: "complete"
+        //     input "buttonList", "capability.button", title: "Select Buttons Devices:  (${buttonList ? buttonList?.size() : 0} Selected)", required: false, multiple: true, submitOnChange: true
+        //     input "momentaryList", "capability.momentary", title: "Select Momentary Devices:  (${momentaryList ? momentaryList?.size() : 0} Selected)", required: false, multiple: true, submitOnChange: true
+        // }
         section() {
             paragraph title: "Device Counts:", "Total Devices: ${getDeviceCnt()}"
         }
@@ -81,6 +76,7 @@ def mainPage() {
             href url: getAppEndpointUrl("config"), style: "embedded", required: false, title: "View the Configuration Data for Homebridge", description: "Tap, select, copy, then click \"Done\""
         }
         section() {
+            input "noTemp", "bool", title: "Remove Temp from Contact, Water Sensor?", required: false, defaultValue: false, submitOnChange: true
         	input "showLogs", "bool", title: "Show Events in Live Logs?", required: false, defaultValue: true, submitOnChange: true
         	label title: "SmartApp Label (optional)", description: "Rename this App", defaultValue: app?.name, required: false 
         }
@@ -130,7 +126,7 @@ def initialize() {
 
 def renderDevices() {
     def deviceData = []
-    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "hunterFanLightList", "modeList", "momentaryList", "buttonList"]
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "hunterFanLightList", "modeList"]
     items?.each { item ->   
         if(settings[item]?.size()) {
             settings[item]?.each { dev->
@@ -148,6 +144,7 @@ def renderDevices() {
 }
 
 def getDeviceData(type, sItem) {
+    // log.debug "getDeviceData($type, $sItem)"
     def curType = null
     def devId = sItem
     def obj = null
@@ -195,11 +192,11 @@ def getDeviceData(type, sItem) {
             deviceid: !isVirtual ? sItem?.id : devId,
             status: !isVirtual ? sItem?.status : "Online",
             manufacturerName: !isVirtual ? sItem?.getManufacturerName() : "SmartThings",
-            modelName: !isVirtual ? (sItem?.getModelName() ?: sItem?.getTypeName()) : "${type} Device",
-            serialNumber: !isVirtual ? sItem?.getDeviceNetworkId() : "${type}",
+            modelName: !isVirtual ? (sItem?.getModelName() ?: sItem?.getTypeName()) : "${curType} Device",
+            serialNumber: !isVirtual ? sItem?.getDeviceNetworkId() : "${curType}${devId}",
             firmwareVersion: "1.0.0",
             lastTime: !isVirtual ? sItem?.getLastActivity() : now(),
-            capabilities: !isVirtual ? deviceCapabilityList(sItem) : ["${type}": 1], 
+            capabilities: !isVirtual ? deviceCapabilityList(sItem) : ["${curType}": 1], 
             commands: !isVirtual ? deviceCommandList(sItem) : [on:[]], 
             attributes: !isVirtual ? deviceAttributeList(sItem) : ["switch": attrVal]
         ]
@@ -207,8 +204,7 @@ def getDeviceData(type, sItem) {
 }
 
 def modeSwitchState(mode) {
-	// log.trace "modeSwitchState(${mode} | ${location.mode.toString() == mode ? "on" : "off"})"
-    return location.mode.toString() == mode ? "on" : "off"
+    return location?.mode?.toString() == mode ? "on" : "off"
 }
 
 def getShmDevice() {
@@ -229,7 +225,7 @@ def getShmDevice() {
 }
 
 def findDevice(paramid) {
-	def device = deviceList.find { it?.id == paramid }
+    def device = deviceList.find { it?.id == paramid }
   	if (device) return device
 	device = sensorList.find { it?.id == paramid }
 	if (device) return device
@@ -248,11 +244,47 @@ def findDevice(paramid) {
     device = buttonList.find { it?.id == paramid }
     if (device) return device
     device = hunterFanLightList.find { it?.id == paramid }
-	return device
- }
+    return device
+}
+
+def findDeviceNew(paramid, type=null) {
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "momentaryList", "buttonList"]
+    if(type) { items = ["${type}"] }
+    items?.each { item ->   
+        if(settings[item]?.size()) {
+            settings[item]?.each { dev->
+                if(dev?.id == paramid) { 
+                    log.debug "${getObjType(dev)}"
+                    return dev 
+                }
+            }
+        }
+    }
+    return null
+}
 
 def authError() {
     return [error: "Permission denied"]
+}
+
+def getObjType(obj) {
+	if(obj instanceof String) {return "String"}
+	else if(obj instanceof GString) {return "GString"}
+	else if(obj instanceof Map) {return "Map"}
+    else if(obj instanceof Collection) {return "Collection"}
+    else if(obj instanceof Closure) {return "Closure"}
+    else if(obj instanceof LinkedHashMap) {return "LinkedHashMap"}
+    else if(obj instanceof HashMap) {return "HashMap"}
+	else if(obj instanceof List) {return "List"}
+	else if(obj instanceof ArrayList) {return "ArrayList"}
+	else if(obj instanceof Integer) {return "Integer"}
+	else if(obj instanceof BigInteger) {return "BigInteger"}
+	else if(obj instanceof Long) {return "Long"}
+	else if(obj instanceof Boolean) {return "Boolean"}
+	else if(obj instanceof BigDecimal) {return "BigDecimal"}
+	else if(obj instanceof Float) {return "Float"}
+	else if(obj instanceof Byte) {return "Byte"}
+	else { return "unknown"}
 }
 
 def getShmStatus(retInt=false) {
@@ -285,7 +317,7 @@ def renderConfig() {
                 app_id: app.id,
                 access_token:  state?.accessToken
             ]
-        ],
+        ]
     ])
 
     def configString = new groovy.json.JsonOutput().prettyPrint(configJson)
@@ -463,6 +495,9 @@ def deviceCapabilityList(device) {
         items["LightBulb"] = 1
         items["Fan"] = 1
     }
+    if(settings?.noTemp && items["Temperature Measurement"] && (items["Contact Sensor"] != null || items["Water Sensor"] != null)) {
+        items.remove("Temperature Measurement")
+    }
 	return items
 }
 
@@ -536,6 +571,9 @@ def registerChangeHandler(devices, showlog=false) {
 		def theAtts = device?.supportedAttributes
         if(showlog) { log.debug "atts: ${theAtts}" }
 		theAtts?.each {att ->
+            if(settings?.noTemp && att == "temperature" && device?.capabilities.find { it?.name == "Contact Sensor" || it?.name == "Water Sensor" }) {
+                items.remove("Temperature Measurement")
+            }
             if(!(ignoreTheseAttributes().contains(att?.name))) {
 		        subscribe(device, att?.name, "changeHandler")
     		    if(showlog) { log.debug "Registering ${device?.displayName}.${att?.name}" }
@@ -574,7 +612,11 @@ def changeHandler(evt) {
             }
             break
         default:
-            sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: value, evtUnit: evt?.unit ?: "", evtDate: dt])
+            // if(findDeviceNew(deviceid, "buttonList") || findDeviceNew(deviceid, "momentaryList")) {
+            //     sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: "off", evtUnit: evt?.unit ?: "", evtDate: dt])
+            // } else {
+                sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: value, evtUnit: evt?.unit ?: "", evtDate: dt])
+            // }
             break
     }
     if (sendEvt && state?.directIP != "" && sendItems?.size()) {
