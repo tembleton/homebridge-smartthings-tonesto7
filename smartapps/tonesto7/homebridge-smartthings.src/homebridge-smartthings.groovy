@@ -47,7 +47,7 @@ def mainPage() {
 		}
         section("Fan/Light Combo Devices:") {
             paragraph "This will create two devices in homekit one light and one fan"
-			input "hamptonBayFanLightList", "capability.switch", title: "Hunter Fan/Light Devices (${hunterFanList ? hunterFanList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+			input "hamptonBayFanLightList", "capability.switch", title: "Hampton Bay Fan/Light Devices (${hamptonBayFanLightList ? hamptonBayFanLightList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 		}
         section("All Other Devices:") {
             input "sensorList", "capability.sensor", title: "Sensor Devices: (${sensorList ? sensorList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
