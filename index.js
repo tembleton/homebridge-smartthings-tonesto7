@@ -171,6 +171,7 @@ SmartThingsPlatform.prototype = {
             'Thermostat Heating Setpoint',
             'Thermostat Setpoint',
             'Fan Speed',
+            'FanControl',
             'FanAndLight',
             'Fan',
             'Indicator',

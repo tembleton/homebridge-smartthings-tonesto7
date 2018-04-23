@@ -1,11 +1,7 @@
 var inherits = require('util').inherits;
 
-var Accessory,
-    Service,
-    Characteristic,
-    uuid,
-    customCharacteristics,
-    customServices;
+var Accessory, Service, Characteristic, uuid, EnergyCharacteristics;
+//, customCharacteristics, customServices;
 
 /*
  *   SmartThings Accessory
@@ -16,8 +12,9 @@ module.exports = function(oAccessory, oService, oCharacteristic, ouuid) {
         Accessory = oAccessory;
         Service = oService;
         Characteristic = oCharacteristic;
-        customCharacteristics = require('../lib/communityCharacteristics').customCharacteristics(Characteristic);
-        customServices = require('../lib/communityServices').customServices(Service);
+        EnergyCharacteristics = require('../lib/customCharacteristics').EnergyCharacteristics(Characteristic);
+        // customCharacteristics = require('../lib/communityCharacteristics').customCharacteristics(Characteristic);
+        // customServices = require('../lib/communityServices').customServices(Service);
         uuid = ouuid;
 
         inherits(SmartThingsAccessory, Accessory);
@@ -374,9 +371,8 @@ function SmartThingsAccessory(platform, device) {
         }
 
         //Handles Standalone Fan with no levels
-        if (isFan === true && that.deviceGroup === 'unknown') {
+        if (isFan === true && (that.device.capabilities['FanAndLight'] !== undefined || that.deviceGroup === 'unknown')) {
             that.deviceGroup = 'fans';
-
             thisCharacteristic = that.getaddService(Service.Fanv2).getCharacteristic(Characteristic.Active);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, that.device.attributes.switch === 'on');
@@ -397,19 +393,34 @@ function SmartThingsAccessory(platform, device) {
             // });
             // that.platform.addAttributeUsage('fanState', that.deviceid, thisCharacteristic);
 
-            if (that.device.attributes.level !== undefined) {
-                thisCharacteristic = that.getaddService(Service.Fanv2).getCharacteristic(Characteristic.RotationSpeed);
-                thisCharacteristic.on('get', function(callback) {
-                    callback(null, parseInt(that.device.attributes.level));
-                });
-                thisCharacteristic.on('set', function(value, callback) {
-                    if (value > 0) {
-                        that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
-                            value1: value
-                        });
-                    }
-                });
-                that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
+            if (that.device.attributes.level !== undefined && that.device.attributes.speed !== undefined) {
+                if (that.device.attributes.speed !== undefined) {
+                    thisCharacteristic = that.getaddService(Service.Fanv2).getCharacteristic(Characteristic.RotationSpeed);
+                    thisCharacteristic.on('get', function(callback) {
+                        callback(null, fanSpeedConversion(that.device.attributes.speed));
+                    });
+                    thisCharacteristic.on('set', function(value, callback) {
+                        if (that.device.capabilities['FanAndLight'] === undefined && that.device.capabilities['FanControl'] === undefined && that.device.attributes) {
+                            that.platform.api.runCommand(callback, that.deviceid, 'fanspeed', {
+                                value1: fanSpeedConversion(value)
+                            });
+                        }
+                    });
+                    that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
+                } else if (that.device.attributes.level !== undefined) {
+                    thisCharacteristic = that.getaddService(Service.Fanv2).getCharacteristic(Characteristic.RotationSpeed);
+                    thisCharacteristic.on('get', function(callback) {
+                        callback(null, parseInt(that.device.attributes.level));
+                    });
+                    thisCharacteristic.on('set', function(value, callback) {
+                        if (value > 0) {
+                            that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
+                                value1: value
+                            });
+                        }
+                    });
+                    that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
+                }
             }
         }
 
@@ -461,7 +472,7 @@ function SmartThingsAccessory(platform, device) {
             that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
         }
 
-        if (device.capabilities['Switch'] !== undefined && that.deviceGroup === 'unknown') {
+        if (device.capabilities['Switch'] !== undefined && (that.device.capabilities['FanAndLight'] !== undefined || that.deviceGroup === 'unknown')) {
             //Handles Standalone Fan with no levels
             if (isLight === true) {
                 that.deviceGroup = 'light';
@@ -728,7 +739,7 @@ function SmartThingsAccessory(platform, device) {
 
         if (device.capabilities['Energy Meter'] !== undefined) {
             that.deviceGroup = 'EnergyMeter';
-            thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(customCharacteristics.TotalConsumption1);
+            thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(EnergyCharacteristics.TotalConsumption1);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, Math.round(that.device.attributes.energy));
             });
@@ -736,7 +747,7 @@ function SmartThingsAccessory(platform, device) {
         }
 
         if (device.capabilities['Power Meter'] !== undefined) {
-            thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(customCharacteristics.CurrentConsumption1);
+            thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(EnergyCharacteristics.CurrentConsumption1);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, Math.round(that.device.attributes.power));
             });
@@ -1030,6 +1041,18 @@ function SmartThingsAccessory(platform, device) {
         }
     }
     this.loadData(device, that);
+}
+
+function fanSpeedConversion(speedVal) {
+    if (speedVal < 25) {
+        return "off";
+    } else if (speedVal >= 25 && speedVal < 50) {
+        return "low";
+    } else if (speedVal >= 50 && speedVal < 75) {
+        return "medium";
+    } else if (speedVal > 75 && speedVal <= 100) {
+        return "high";
+    }
 }
 
 function convertAlarmState(value, valInt = false) {

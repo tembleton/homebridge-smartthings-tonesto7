@@ -45,9 +45,10 @@ def mainPage() {
             paragraph "Notice: \nOnly Tested with Rachio Devices"
 			input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 		}
-        // section("Fan/Light Combo Devices:") {
-		// 	input "hunterFanLightList", "capability.switch", title: "Hunter Fan/Light Devices (${hunterFanList ? hunterFanList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
-		// }
+        section("Fan/Light Combo Devices:") {
+            paragraph "This will create two devices in homekit one light and one fan"
+			input "hamptonBayFanLightList", "capability.switch", title: "Hunter Fan/Light Devices (${hunterFanList ? hunterFanList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+		}
         section("All Other Devices:") {
             input "sensorList", "capability.sensor", title: "Sensor Devices: (${sensorList ? sensorList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "switchList", "capability.switch", title: "Switch Devices: (${switchList ? switchList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
@@ -66,8 +67,8 @@ def mainPage() {
             paragraph title: "What are these for?", "HomeKit will create a switch device for each mode.  The switch will be ON for the active mode.", state: "complete"
             def modes = location?.modes?.sort{it?.name}?.collect { [(it?.id):it?.name] }
             input "modeList", "enum", title: "Create Devices for these Modes", required: false, multiple: true, options: modes, submitOnChange: true
-            def routines = location.helloHome?.getPhrases()?.sort { it?.label }?.collect { [(it?.id):it?.label] }
-            input "routineList", "enum", title: "Create Devices for these Routines", required: false, multiple: true, options: routines, submitOnChange: true
+            // def routines = location.helloHome?.getPhrases()?.sort { it?.label }?.collect { [(it?.id):it?.label] }
+            // input "routineList", "enum", title: "Create Devices for these Routines", required: false, multiple: true, options: routines, submitOnChange: true
         }
         section("Smart Home Monitor Support (SHM)") {
             input "addShmDevice", "bool", title: "Allow SHM Control in HomeKit?", required: false, defaultValue: true, submitOnChange: true
@@ -85,7 +86,7 @@ def mainPage() {
 
 def getDeviceCnt() {
     def devices = []
-    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "hunterFanLightList"]
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "hamptonBayFanLightList"]
     items?.each { item ->   
         if(settings[item]?.size() > 0) {     
             devices = devices + settings[item]
@@ -126,7 +127,7 @@ def initialize() {
 
 def renderDevices() {
     def deviceData = []
-    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "hunterFanLightList", "modeList"]
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "hamptonBayFanLightList", "modeList"]
     items?.each { item ->   
         if(settings[item]?.size()) {
             settings[item]?.each { dev->
@@ -239,12 +240,13 @@ def findDevice(paramid) {
     if (device) return device
     device = irrigationList.find { it?.id == paramid }
     if (device) return device
-    device = momentaryList.find { it?.id == paramid }
-    if (device) return device
-    device = buttonList.find { it?.id == paramid }
-    if (device) return device
-    device = hunterFanLightList.find { it?.id == paramid }
+    device = hamptonBayFanLightList.find { it?.id == paramid }
     return device
+    // device = momentaryList.find { it?.id == paramid }
+    // if (device) return device
+    // device = buttonList.find { it?.id == paramid }
+    // return device
+    
 }
 
 def findDeviceNew(paramid, type=null) {
@@ -349,6 +351,10 @@ def deviceCommand() {
     if(settings?.addShmDevice != false && params?.id == "alarmSystemStatus") {
         setShmMode(command)
         CommandReply("Success", "Security Alarm, Command $command")
+    }  else if (settings?.hamptonBayFanLightList && command == "fanspeed") {
+        def value1 = request.JSON?.value1
+        if(value1 && device?.hasCommand(value1)) { dev?."${value1}"() }
+        CommandReply("Success", "Routine Device, Command $command")
     } else if (settings?.modeList && command == "mode") {
         def value1 = request.JSON?.value1
         log.debug "value1: ${value1}"
@@ -490,7 +496,7 @@ def deviceCapabilityList(device) {
     if(settings?.speakerList.find { it?.id == device?.id }) {
         items["Speaker"] = 1
     }
-    if(settings?.hunterFanLightList.find { it?.id == device?.id }) {
+    if(settings?.hamptonBayFanLightList.find { it?.id == device?.id } && items["Switch Level"] && items["Fan Speed"]) {
         items["FanAndLight"] = 1
         items["LightBulb"] = 1
         items["Fan"] = 1
@@ -528,7 +534,7 @@ def getAllData() {
 }
 
 def registerDevices() {
-//This has to be done at startup because it takes too long for a normal command.
+    //This has to be done at startup because it takes too long for a normal command.
     log.debug "Registering (${settings?.deviceList?.size() ?: 0}) Other Devices"
 	registerChangeHandler(settings?.deviceList)
     log.debug "Registering (${settings?.irrigationList?.size() ?: 0}) Sprinklers"
@@ -536,17 +542,17 @@ def registerDevices() {
 }
 
 def registerSensors() {
-//This has to be done at startup because it takes too long for a normal command.
+    //This has to be done at startup because it takes too long for a normal command.
     log.debug "Registering (${settings?.sensorList?.size() ?: 0}) Sensors"
     registerChangeHandler(settings?.sensorList)
     log.debug "Registering (${settings?.speakerList?.size() ?: 0}) Speakers"
     registerChangeHandler(settings?.speakerList)
-    log.debug "Registering (${settings?.hunterFanLightList?.size() ?: 0}) FanLights"
-    registerChangeHandler(settings?.hunterFanLightList)
+    log.debug "Registering (${settings?.hamptonBayFanLightList?.size() ?: 0}) FanLights"
+    registerChangeHandler(settings?.hamptonBayFanLightList)
 }
 
 def registerSwitches() {
-//This has to be done at startup because it takes too long for a normal command.
+    //This has to be done at startup because it takes too long for a normal command.
     log.debug "Registering (${settings?.switchList?.size() ?: 0}) Switches"
 	registerChangeHandler(settings?.switchList)
     log.debug "Registering (${settings?.lightList?.size() ?: 0}) Lights"
@@ -568,15 +574,16 @@ def ignoreTheseAttributes() {
 
 def registerChangeHandler(devices, showlog=false) {
 	devices?.each { device ->
-		def theAtts = device?.supportedAttributes
+		List theAtts = device?.supportedAttributes?.collect { it?.name as String }?.unique()
         if(showlog) { log.debug "atts: ${theAtts}" }
 		theAtts?.each {att ->
-            if(settings?.noTemp && att == "temperature" && device?.capabilities.find { it?.name == "Contact Sensor" || it?.name == "Water Sensor" }) {
-                items.remove("Temperature Measurement")
-            }
-            if(!(ignoreTheseAttributes().contains(att?.name))) {
-		        subscribe(device, att?.name, "changeHandler")
-    		    if(showlog) { log.debug "Registering ${device?.displayName}.${att?.name}" }
+            if(!(ignoreTheseAttributes().contains(att))) {
+                if(settings?.noTemp && att == "temperature" && (device?.hasAttribute("contact") || device?.hasAttribute("water"))) {
+                    return 
+                } else {
+                    subscribe(device, att, "changeHandler")
+                    if(showlog) { log.debug "Registering ${device?.displayName}.${att}" }
+                }
             }
 		}
 	}
