@@ -6,7 +6,7 @@
  */
  
 import groovy.transform.Field
-@Field String appVersion = "1.1.0"
+@Field String appVersion = "1.1.2"
 @Field String appIconUrl = "https://raw.githubusercontent.com/pdlove/homebridge-smartthings/master/smartapps/JSON%401.png"
 
 definition(
@@ -497,7 +497,7 @@ def deviceCapabilityList(device) {
         items["Speaker"] = 1
     }
     if(settings?.hamptonBayFanLightList.find { it?.id == device?.id } && items["Switch Level"] && items["Fan Speed"]) {
-        items["FanAndLight"] = 1
+        items["Fan Light"] = 1
         items["LightBulb"] = 1
         items["Fan"] = 1
     }
