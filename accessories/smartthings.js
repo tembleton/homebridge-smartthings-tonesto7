@@ -68,8 +68,8 @@ function SmartThingsAccessory(platform, device) {
     that.deviceGroup = 'unknown'; // that way we can easily tell if we set a device group
     var thisCharacteristic;
     // platform.log(JSON.stringify(device));
-    let isFan = (device.capabilities['Fan'] !== undefined || device.commands.lowSpeed !== undefined);
-    let isLight = (device.capabilities['LightBulb'] !== undefined || device.capabilities['Bulb'] !== undefined || device.name.includes('light'));
+    let isFan = (device.capabilities['Fan'] !== undefined || that.device.capabilities['FanAndLight'] !== undefined || device.commands.lowSpeed !== undefined);
+    let isLight = (device.capabilities['LightBulb'] !== undefined || device.capabilities['Bulb'] !== undefined || that.device.capabilities['FanAndLight'] !== undefined || device.name.includes('light'));
     let isSpeaker = (device.capabilities['Speaker'] !== undefined);
 
     if (device && device.capabilities) {
@@ -393,11 +393,11 @@ function SmartThingsAccessory(platform, device) {
             // });
             // that.platform.addAttributeUsage('fanState', that.deviceid, thisCharacteristic);
 
-            if (that.device.attributes.level !== undefined && that.device.attributes.speed !== undefined) {
-                if (that.device.attributes.speed !== undefined) {
+            if (that.device.attributes.level !== undefined || that.device.attributes.fanSpeed !== undefined || that.device.attributes.speed !== undefined) {
+                if (that.device.attributes.fanSpeed !== undefined || that.device.attributes.speed !== undefined) {
                     thisCharacteristic = that.getaddService(Service.Fanv2).getCharacteristic(Characteristic.RotationSpeed);
                     thisCharacteristic.on('get', function(callback) {
-                        callback(null, fanSpeedConversion(that.device.attributes.speed));
+                        callback(null, fanSpeedConversion(that.device.attributes.fanSpeed));
                     });
                     thisCharacteristic.on('set', function(value, callback) {
                         if (that.device.capabilities['FanAndLight'] === undefined && that.device.capabilities['FanControl'] === undefined && that.device.attributes) {
@@ -476,7 +476,9 @@ function SmartThingsAccessory(platform, device) {
             //Handles Standalone Fan with no levels
             if (isLight === true) {
                 that.deviceGroup = 'light';
-
+                if (that.device.capabilities['FanAndLight'] !== undefined) {
+                    that.platform.log('Fan Light: ' + that.device.name);
+                }
                 thisCharacteristic = that.getaddService(Service.Lightbulb).getCharacteristic(Characteristic.On);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, that.device.attributes.switch === 'on');
