@@ -6,7 +6,7 @@
  */
  
 import groovy.transform.Field
-@Field String appVersion = "1.1.2"
+@Field String appVersion = "1.1.3"
 @Field String appIconUrl = "https://raw.githubusercontent.com/pdlove/homebridge-smartthings/master/smartapps/JSON%401.png"
 
 definition(

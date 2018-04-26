@@ -1,7 +1,6 @@
 var inherits = require('util').inherits;
 
-var Accessory, Service, Characteristic, uuid, EnergyCharacteristics;
-//, customCharacteristics, customServices;
+var Accessory, Service, Characteristic, uuid, EnergyCharacteristics, communityTypes, communityServices;
 
 /*
  *   SmartThings Accessory
@@ -13,8 +12,8 @@ module.exports = function(oAccessory, oService, oCharacteristic, ouuid) {
         Service = oService;
         Characteristic = oCharacteristic;
         EnergyCharacteristics = require('../lib/customCharacteristics').EnergyCharacteristics(Characteristic);
-        // customCharacteristics = require('../lib/communityCharacteristics').customCharacteristics(Characteristic);
-        // customServices = require('../lib/communityServices').customServices(Service);
+        communityTypes = require('../lib/communityTypes');
+        communityServices = require('../lib/communityServices').communityServices(Service);
         uuid = ouuid;
 
         inherits(SmartThingsAccessory, Accessory);
@@ -252,22 +251,23 @@ function SmartThingsAccessory(platform, device) {
             let valveType = (device.capabilities['Irrigation'] !== undefined ? 1 : 0);
 
             if (device.capabilities['Irrigation'] !== undefined) {
-                // that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
-                // if (device.attributes.scheduleType !== undefined) {
-                //     thisCharacteristic = that.getaddService(Service.IrrigationSystem).getCharacteristic(Characteristic.ProgramMode);
-                //     thisCharacteristic.on('get', function(callback) {
-                //         let val = 0;
-                //         if (device.attributes.scheduleType === 'program') {
-                //             val = 1;
-                //         } else if (device.attributes.scheduleType === 'off') {
-                //             val = 0;
-                //         } else if (device.attributes.scheduleType === 'manual') {
-                //             val = 2;
-                //         }
-                //         callback(null, val);
-                //     });
-                //     that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
-                // }
+
+                that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
+                if (device.attributes.scheduleType !== undefined) {
+                    thisCharacteristic = that.getaddService(Service.IrrigationSystem).getCharacteristic(Characteristic.ProgramMode);
+                    thisCharacteristic.on('get', function(callback) {
+                        let val = 0;
+                        if (device.attributes.scheduleType === 'program') {
+                            val = 1;
+                        } else if (device.attributes.scheduleType === 'off') {
+                            val = 0;
+                        } else if (device.attributes.scheduleType === 'manual') {
+                            val = 2;
+                        }
+                        callback(null, val);
+                    });
+                    that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
+                }
             }
             //Defines the valve type (irrigation or generic)
             thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.ValveType);
