@@ -1,6 +1,6 @@
 var inherits = require('util').inherits;
 
-var Accessory, Service, Characteristic, uuid, EnergyCharacteristics, communityTypes, communityServices;
+var Accessory, Service, Characteristic, uuid, CommunityServices, CommunityTypes;
 
 /*
  *   SmartThings Accessory
@@ -11,9 +11,8 @@ module.exports = function(oAccessory, oService, oCharacteristic, ouuid) {
         Accessory = oAccessory;
         Service = oService;
         Characteristic = oCharacteristic;
-        EnergyCharacteristics = require('../lib/customCharacteristics').EnergyCharacteristics(Characteristic);
-        communityTypes = require('../lib/communityTypes');
-        communityServices = require('../lib/communityServices').communityServices(Service);
+        CommunityTypes = require('../lib/communityTypes').CommunityTypes(Service, Characteristic);
+        CommunityServices = require('../lib/communityServices').CommunityServices(Service, Characteristic);
         uuid = ouuid;
 
         inherits(SmartThingsAccessory, Accessory);
@@ -76,7 +75,7 @@ function SmartThingsAccessory(platform, device) {
             if (device.commands.levelOpenClose) {
                 // This is a Window Shade
                 that.deviceGroup = 'shades';
-
+                CommunityTypes.
                 thisCharacteristic = that.getaddService(Service.WindowCovering).getCharacteristic(Characteristic.TargetPosition);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, parseInt(that.device.attributes.level));
@@ -491,14 +490,14 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
 
                 if (that.device.capabilities['Energy Meter'] !== undefined) {
-                    thisCharacteristic = that.getaddService(Service.Switch).addCharacteristic(EnergyCharacteristics.CurrentConsumption1);
+                    thisCharacteristic = that.getaddService(Service.Switch).addCharacteristic(CommunityTypes.CurrentConsumption1);
                     thisCharacteristic.on('get', function(callback) {
                         callback(null, Math.round(that.device.attributes.power));
                     });
                     that.platform.addAttributeUsage('power', that.deviceid, thisCharacteristic);
                 }
                 if (device.capabilities['Power Meter'] !== undefined) {
-                    thisCharacteristic = that.getaddService(Service.Switch).addCharacteristic(EnergyCharacteristics.CurrentConsumption1);
+                    thisCharacteristic = that.getaddService(Service.Switch).addCharacteristic(CommunityTypes.CurrentConsumption1);
                     thisCharacteristic.on('get', function(callback) {
                         callback(null, Math.round(that.device.attributes.power));
                     });
@@ -739,7 +738,7 @@ function SmartThingsAccessory(platform, device) {
 
         // if (device.capabilities['Energy Meter'] !== undefined && that.deviceGroup === 'unknown') {
         //     that.deviceGroup = 'EnergyMeter';
-        //     thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(EnergyCharacteristics.TotalConsumption1);
+        //     thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(CommunityTypes.TotalConsumption1);
         //     thisCharacteristic.on('get', function(callback) {
         //         callback(null, Math.round(that.device.attributes.energy));
         //     });
@@ -747,7 +746,7 @@ function SmartThingsAccessory(platform, device) {
         // }
 
         // if (device.capabilities['Power Meter'] !== undefined && that.deviceGroup === 'unknown') {
-        //     thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(EnergyCharacteristics.CurrentConsumption1);
+        //     thisCharacteristic = that.getaddService(Service.Outlet).addCharacteristic(CommunityTypes.CurrentConsumption1);
         //     thisCharacteristic.on('get', function(callback) {
         //         callback(null, Math.round(that.device.attributes.power));
         //     });
