@@ -4,15 +4,15 @@
 
 Current Smartapp version - 1.1.3
 
-If you are upgrading from a prior version, make sure you are using the latest Smartapp.
+This version is not compatible with prior versions of homebridge-smartthings Smartapp.
 
 ### Direct Updates from SmartThings
-This method is nearly instant.
-This option allows the hub to send updates directly to your homebridge-smartthings installation.
-The hub must be able to send an http packet to your device so make sure to allow incoming traffic on the applicable port.
-The port used for this can be configured by the "direct_port" setting and defaults to 8000.
-The program will attempt to determine your IP address automatically, but that can be overridden by "direct_ip" which is useful if you have multiple addresses.
-As a note, the hub isn't actual doing any of the processing so if you lose Internet, updates will stop. I'm told it "doesn't currently" support it, so there is hope.
+ * This method is nearly instant.
+ * This option allows the hub to send updates directly to your homebridge-smartthings installation.
+ * The hub must be able to send an http packet to your device so make sure to allow incoming traffic on the applicable port.
+ * The port used for this can be configured by the "direct_port" setting and defaults to 8000.
+ * The program will attempt to determine your IP address automatically, but that can be overridden by "direct_ip" which is useful if you have multiple addresses.
+ * As a note, the hub isn't actual doing any of the processing so if you lose Internet, updates will stop. I'm told it "doesn't currently" support it, so there is hope.
 
 When properly setup, you should see something like this in your Homebridge startup immediately after the PIN:
 ```
