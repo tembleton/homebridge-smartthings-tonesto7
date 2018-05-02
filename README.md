@@ -1,6 +1,7 @@
 # homebridge-smartthings-tonesto7
 
 [![npm version](https://badge.fury.io/js/homebridge-smartthings-tonesto7.svg)](https://badge.fury.io/js/homebridge-smartthings-tonesto7)
+
 Current Smartapp version - 1.1.3
 
 If you are upgrading from a prior version, make sure you are using the latest Smartapp.
@@ -75,9 +76,9 @@ If you installed the previous update that doesn't allow selecting devices, you n
 
 Example of all settings. Not all ssettings are required. Read the breakdown below.
 ```
-	{
-	   "platform": "SmartThings",
-    	"name": "SmartThings",
+    {
+        "platform": "SmartThings",
+        "name": "SmartThings",
         "app_url": "https://graph.api.smartthings.com:443/api/smartapps/installations/",
         "app_id": "THIS-SHOULD-BE-YOUR-APPID",
         "access_token": "THIS-SHOULD-BE-YOUR-TOKEN",
@@ -85,7 +86,7 @@ Example of all settings. Not all ssettings are required. Read the breakdown belo
         "update_method": "direct",
         "direct_ip": "192.168.0.45",
         "direct_port": 8000
-	}
+    }
 ```
 * "platform" and "name"
 **_Required_**
