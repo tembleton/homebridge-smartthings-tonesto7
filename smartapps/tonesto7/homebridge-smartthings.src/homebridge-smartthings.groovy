@@ -77,7 +77,7 @@ def mainPage() {
             href url: getAppEndpointUrl("config"), style: "embedded", required: false, title: "View the Configuration Data for Homebridge", description: "Tap, select, copy, then click \"Done\""
         }
         section() {
-            input "noTemp", "bool", title: "Remove Temp from Contact, Water Sensor?", required: false, defaultValue: false, submitOnChange: true
+            input "noTemp", "bool", title: "Remove Temp from Contacts and Water Sensors?", required: false, defaultValue: false, submitOnChange: true
         	input "showLogs", "bool", title: "Show Events in Live Logs?", required: false, defaultValue: true, submitOnChange: true
         	label title: "SmartApp Label (optional)", description: "Rename this App", defaultValue: app?.name, required: false 
         }
