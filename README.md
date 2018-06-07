@@ -1,10 +1,36 @@
 # homebridge-smartthings-tonesto7
 
+This is based off of @pdlove homebridge-smartthings
+
 [![npm version](https://badge.fury.io/js/homebridge-smartthings-tonesto7.svg)](https://badge.fury.io/js/homebridge-smartthings-tonesto7)
 
-Current Smartapp version - 1.1.3
+**```Current App version: 1.1.3```**
 
-This version is not compatible with prior versions of homebridge-smartthings Smartapp.
+<br>
+
+# Change Log:
+
+#### SmartThing App:
+
+***v1.0.0*** - Overhauled app from Paul's SmartThings version.
+
+***v1.0.1*** - SmartHomeMonitor Support is set to Off by Default.
+
+***v1.1.3*** - App Cleanups.  Added Windows Shades support for Native HomeKit control.
+
+#### Homebridge Plugin:
+
+***v1.0.0*** - Reworked alot of the code to allow for better direct communication with Hubitat
+
+***v1.1.2*** - Added Native support for Window Shades
+
+***v1.1.3*** - Readme Update test
+
+
+
+<br>
+
+## This version is not compatible with prior versions of homebridge-smartthings Smartapp.
 
 ### Direct Updates from SmartThings
  * This method is nearly instant.
@@ -17,108 +43,90 @@ This version is not compatible with prior versions of homebridge-smartthings Sma
 When properly setup, you should see something like this in your Homebridge startup immediately after the PIN:
 ```
 [1/29/2017, 8:28:45 AM] Homebridge is running on port 51826.
-[1/29/2017, 8:28:45 AM] [SmartThings] Direct Connect Is Listening On 192.168.0.49:8000
+[1/29/2017, 8:28:45 AM] [SmartThings] Direct Connect Is Listening On 10.0.0.70:8000
 [1/29/2017, 8:28:45 AM] [SmartThings] SmartThings Hub Communication Established
 ```
 
-## Upgrade Existing Installation
-
-1. Log into your SmartThings account at https://graph.api.smartthings.com/ Then goto "MySmartApps"
-2. Click "Update From Repo" and select "homebridge-smartthings".
-3. You should see the smartapp listed under "Obsolete". Check the box next to the smart app. Check the box next to Publish. Click Execute Update.
-4. Close homebridge, if running.
-5. Run "npm update homebridge -g" to make sure homebridge is up to date.
-6. Run "npm update homebridge-smartthings -g" to update the smartthings module
- * If you didn't originally install with -g then simple omit that here.
-7. Start Homebridge. After displaying the network PIN, it should display "Direct Connect Is Listening On XXX.XXX.XXX.XXX:8000" followed by "SmartThings Hub Communication Established".
- * If it displays Direct Connect is Listening... but not Communications Established then check your computer's local firewall for anything blocking TCP 8000 and make sure the listed IP address is on the same network as the SmartThings Hub.
-8. Test the process. Make sure your lights show up in Home. Use the Smartthings app to toggle a light on or off and make sure the change is reflected on the IOS device. The Home app should update the status before you have time to switch from Smartthings back to Home.
-9. All done.
-
-## Installation
+# Installation
 
 Installation comes in two parts:
 
-### SmartThings API installation
-A custom JSON API has been written to interface with Smartthings. If you have any other than the one called "" then you need to install the new one.
-This plugin will NOT work with the original "JSON API" by pdlove due to a lack of features.
+## 1. SmartApp Installation
 
-If you installed the previous update that doesn't allow selecting devices, you need to goto "My Locations" and then "List Smartapps" to remove the multiple installation.
+* Log into your SmartThings account at [SmartThings IDE](https://account.smartthings.com/login)
+* Click on <u><b>```My SmartApps```</b></u>
+* Click on Settings and Add the New repository:
+   * Owner: <u>```tonesto7```</u>
+   * Name: <u>```homebridge-smartthings-tonesto7```</u>
+   * Branch: <u>```master```</u>
+   * Click <u><b>```Save```</b></u>.
+* Click <u><b>```Update From Repo```</b></u>
+   * Select <u>```homebridge-smartthings-tonesto7```</u>
+* You should have <u>homebridge-smartthings.groovy</u> in the New section. 
+   * Check the Box next to <u>```homebridge-smartthings.groovy```</u> 
+   * Check <u><b>```Publish```</b></u> at the bottom
+   * Click <u><b>```Execute Update```</b></u>.
 
-* Log into your SmartThings account at https://graph.api.smartthings.com/
-* Goto "My SmartApps"
-* Click on Settings and add the repository with Owner of "tonesto7" and name of "homebridge-smartthings-tonesto7" and branch of "master" and then click save.
-* Click "Update From Repo" and select "homebridge-smartthings-tonesto7"
-* You should have Homebridge-SmartThings in the New section. Check it, check Publish at the bottom and click "Execute Update".
+* Click on the <u>```Homebridge-SmartThings```</u> app in the list:
+   * Click <u><b>```App Settings```</b></u>
+   * Scroll down to the OAuth section and click <u><b>```Enable OAuth in Smartapp```</b></u>
+   * Click <u><b>```Update```</b></u> at the bottom.
 
-* Click on the app in the list and then click "App Settings"
-* Scroll down to the OAuth section and click "Enable OAuth in Smartapp"
-* Select "Update" at the bottom.
+## 2. SmartApp Configuration
 
-* In the SmartThings App, goto "Marketplace" and select "SmartApps". At the bottom of the list, select "My Apps"
-* Select "Homebridge (SmartThings)" from the list.
-* Tap the plus next to an appropriate device group and then check off each device you would like to use.
- * There are several categories because of the way Smartthings assigns capabilities.
-  * Almost all devices contain the Refresh capability and are under the "Most Devices" group
-  * Some sensors don't have a refresh and are under the "Sensor Devices" group.
-  * Some devices, mainly Virtual Switches, only have the Switch Capability and are in the "All Switches".
- * If you select the same device in multiple categories it will only be shown once in HomeKit, so you can safely check them all in all groups.
- * If a device isn't listed, let me know by submitting an issue on GitHub.
-* Tap Done and then Done.
+* In the SmartThings Mobile App, goto <u>```Marketplace```</u> and select <u>```SmartApps```</u>. 
+* At the bottom of the list, select <u>```My Apps```</u>
+* Select <u>```Homebridge (SmartThings)```</u> from the choices on thelist.
+* Configuring the App:
 
-### Homebridge Installation
+   <u>There are 4 inputs at the top that can be used to force a device to be discovered as a specific type in HomeKit</u>
+   
+   Any other devices being added just Tap on the input next to an appropriate device group and then select each device you would like to use (The same devices can be in any of the Sensor, Switch, Other inputs)
+    * There are several categories because of the way SmartThings assigns capabilities. So you might not see your device in one, but might in another.
+    * Almost all devices contain the Refresh capability and are under the "Other Devices" group
+    * Some sensors don't have a refresh and are under the "Sensor Devices" group.
+    * Some devices, mainly Virtual Switches, only have the Switch Capability and are in the "Switch Devices".
+    
+    <b>Selecting the same device in multiple categories it will only be shown once in HomeKit, so you can safely check them all in all groups</b>
 
-1. Install homebridge using: npm install -g homebridge
-2. Install this plugin using: npm install -g homebridge-smartthings-tonesto7
-3. Update your configuration file. See sample config.json snippet below.
+ * Tap <u><b>```Done```</b></u>
+ * Tap <u><b>```Done```</b></u> 
+ You are finished with the App configuration!
 
-### Config.json Settings
 
-Example of all settings. Not all ssettings are required. Read the breakdown below.
-```
-    {
-        "platform": "SmartThings",
-        "name": "SmartThings",
-        "app_url": "https://graph.api.smartthings.com:443/api/smartapps/installations/",
-        "app_id": "THIS-SHOULD-BE-YOUR-APPID",
-        "access_token": "THIS-SHOULD-BE-YOUR-TOKEN",
-        "polling_seconds": 3600,
-        "update_method": "direct",
-        "direct_ip": "192.168.0.45",
-        "direct_port": 8000
-    }
-```
-* "platform" and "name"
-**_Required_**
- * This information is used by homebridge to identify the plugin and should be the settings above.
+## 3. Homebridge Plugin Installation:
 
-* "app_url", "app_id" and "access_token"
-**_Required_**
- * To get this information, open SmartThings on your phone, goto "Automation">"SmartApps">"JSON Complete API" and tap on Config
- * The app_url in the example may be different for you.
+ 1. Install homebridge using: ```npm i -g homebridge``` (For Homebridge Install: [Homebridge Instructions](https://github.com/nfarina/homebridge/blob/master/README.md))
+ 2. Install Hubitat plugin using: ```npm i -g homebridge-hubitat-tonesto7```
+ 3. Update your configuration file. See sample config.json snippet below.
 
-* "polling_seconds"
-**_Optional_** Defaults to 3600
- * Identifies how often to get full updates. At this interval, homebridge-smartthings will request a complete device dump from the API just in case any subscription events have been missed.
- * This defaults to once every hour. I have had it set to daily in my installation with no noticable issues.
+  <h3 style="padding: 0em .6em;">Config.json Settings Example</h3>
 
-* "update_method"
-**_Optional_** Defaults to direct
- * See *Device Updates from SmartThings* for more information.
- * Options are: "direct", "pubnub", "api" and a recommended in that order.
+  <h4 style="padding: 0em .6em; margin-bottom: 5px;"><u>Example of all settings. Not all settings are required. Read the breakdown below</u></h4>
+   
+   <div style=" overflow:auto;width:auto;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #f8f8f2">{</span>
+   <span style="color: #f92672">&quot;platform&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;SmartThings&quot;</span><span style="color: #f8f8f2">,</span> 
+   <span style="color: #f92672">&quot;name&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;SmartThings&quot;</span><span style="color: #f8f8f2">,</span>
+   <span style="color: #f92672">&quot;app_url&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;https://graph.api.smartthings.com:443/api/smartapps/installations/&quot;</span><span style="color: #f8f8f2">,</span>
+   <span style="color: #f92672">&quot;app_id&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;YOUR_APPS_ID&quot;</span><span style="color: #f8f8f2">,</span>
+   <span style="color: #f92672">&quot;access_token&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;THIS-SHOULD-BE-YOUR-TOKEN&quot;</span><span style="color: #f8f8f2">,</span>
+   <span style="color: #f92672">&quot;polling_seconds&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;3600&quot;</span><span style="color: #f8f8f2">,</span>
+   <span style="color: #f92672">&quot;update_method&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;direct&quot;</span><span style="color: #f8f8f2">,</span>
+   <span style="color: #f92672">&quot;direct_ip&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;10.0.0.70&quot;</span><span style="color: #f8f8f2">,</span>
+   <span style="color: #f92672">&quot;direct_port&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #ae81ff">8000</span><span style="color: #f8f8f2">,</span>
+<span style="color: #f8f8f2">}</span>
+</pre></div>
 
-* "direct_ip"
-**_Optional_** Defaults to first available IP on your computer
- * This setting only applies if update_method is direct.
- * Most installations won't need this, but if for any reason it can't identify your ip address correctly, use this setting to force the IP presented to SmartThings for the hub to send to.
 
-* "direct_port"
-**_Optional_** Defaults to 8000
- * This setting only applies if update_method is direct.
- * This is the port that homebridge-smartthings will listen on for traffic from your hub. Make sure your firewall allows incoming traffic on this port from your hub's IP address.
- 
-## What's New
+ * <p><u>platform</u> & <u>name</u>  <small style="color: orange; font-weight: 600;"><i>Required</i></small><br>
+    This information is used by homebridge to identify the plugin and should be the settings above.</p>
 
-* 1.1.3
- * [SmartApp] Lot's of updates to add support for more device types in Homekit. (I will eventually update the list with more details)
+ * <p><u>app_url</u> & <u>access_token</u>  <small style="color: orange; font-weight: 600;"><i>Required</i></small><br>
+    To get this information, open Hubitat web interface in your browser, goto "Apps" "Homebridge (Hubitat)" and tap on "View Configuration Data for Homebridge"<br><small style="color: yellow;"><b>Notice:</b> The app_url in the example above may be different for you.</small></p>
+
+ * <p><u>direct_ip</u>  <small style="color: #f92672; font-weight: 600;"><i>Optional</i></small><br>
+    Defaults to first available IP on your computer<br><small style="color: gray;">Most installations won't need this, but if for any reason it can't identify your ip address correctly, use this setting to force the IP presented to Hubitat for the hub to send to.</small></p>
+
+ * <p><u>direct_port</u>  <small style="color: #f92672; font-weight: 600;"><i>Optional</i></small><br>
+   Defaults to 8000<br><small style="color: gray;">This is the port that homebridge-hubitat plugin will listen on for traffic from your hub. Make sure your firewall allows incoming traffic on this port from your hub's IP address.</small></p>
 
