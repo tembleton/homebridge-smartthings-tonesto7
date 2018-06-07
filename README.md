@@ -4,7 +4,7 @@ This is based off of @pdlove homebridge-smartthings
 
 [![npm version](https://badge.fury.io/js/homebridge-smartthings-tonesto7.svg)](https://badge.fury.io/js/homebridge-smartthings-tonesto7)
 
-**```Current App version: 1.1.3```**
+**```Current SmartApp version: 1.1.3```**
 
 <br>
 
@@ -12,19 +12,15 @@ This is based off of @pdlove homebridge-smartthings
 
 #### SmartThing App:
 
-***v1.0.0*** - Overhauled app from Paul's SmartThings version.
+***v1.0.0*** - Overhauled JSON API app from Paul's SmartThings version.
 
 ***v1.0.1*** - SmartHomeMonitor Support is set to Off by Default.
 
-***v1.1.3*** - App Cleanups.  Added Windows Shades support for Native HomeKit control.
+***v1.1.3*** - App Cleanups.  Added lot's of features.
 
 #### Homebridge Plugin:
 
-***v1.0.0*** - Reworked alot of the code to allow for better direct communication with Hubitat
-
-***v1.1.2*** - Added Native support for Window Shades
-
-***v1.1.3*** - Readme Update test
+***v1.1.5*** - Lot's of new capabilities supported in HomeKit
 
 
 
@@ -97,7 +93,7 @@ Installation comes in two parts:
 ## 3. Homebridge Plugin Installation:
 
  1. Install homebridge using: ```npm i -g homebridge``` (For Homebridge Install: [Homebridge Instructions](https://github.com/nfarina/homebridge/blob/master/README.md))
- 2. Install Hubitat plugin using: ```npm i -g homebridge-hubitat-tonesto7```
+ 2. Install SmartThings plugin using: ```npm i -g homebridge-smartthings-tonesto7```
  3. Update your configuration file. See sample config.json snippet below.
 
   <h3 style="padding: 0em .6em;">Config.json Settings Example</h3>
@@ -122,11 +118,11 @@ Installation comes in two parts:
     This information is used by homebridge to identify the plugin and should be the settings above.</p>
 
  * <p><u>app_url</u> & <u>access_token</u>  <small style="color: orange; font-weight: 600;"><i>Required</i></small><br>
-    To get this information, open Hubitat web interface in your browser, goto "Apps" "Homebridge (Hubitat)" and tap on "View Configuration Data for Homebridge"<br><small style="color: yellow;"><b>Notice:</b> The app_url in the example above may be different for you.</small></p>
+    To get this information, open Homebridge (SmartThings) SmartApp in your SmartThings Classic Mobile App, and tap on "View Configuration Data for Homebridge"<br><small style="color: yellow;"><b>Notice:</b> The app_url in the example above may be different for you.</small></p>
 
  * <p><u>direct_ip</u>  <small style="color: #f92672; font-weight: 600;"><i>Optional</i></small><br>
-    Defaults to first available IP on your computer<br><small style="color: gray;">Most installations won't need this, but if for any reason it can't identify your ip address correctly, use this setting to force the IP presented to Hubitat for the hub to send to.</small></p>
+    Defaults to first available IP on your computer<br><small style="color: gray;">Most installations won't need this, but if for any reason it can't identify your ip address correctly, use this setting to force the IP presented to SmartThings for the hub to send to.</small></p>
 
  * <p><u>direct_port</u>  <small style="color: #f92672; font-weight: 600;"><i>Optional</i></small><br>
-   Defaults to 8000<br><small style="color: gray;">This is the port that homebridge-hubitat plugin will listen on for traffic from your hub. Make sure your firewall allows incoming traffic on this port from your hub's IP address.</small></p>
+   Defaults to 8000<br><small style="color: gray;">This is the port that homebridge-smartthings plugin will listen on for traffic from your hub. Make sure your firewall allows incoming traffic on this port from your hub's IP address.</small></p>
 
