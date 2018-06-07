@@ -6,7 +6,7 @@
  */
  
 import groovy.transform.Field
-@Field String appVersion = "1.1.3"
+@Field String appVersion = "1.1.4"
 @Field String appIconUrl = "https://raw.githubusercontent.com/pdlove/homebridge-smartthings/master/smartapps/JSON%401.png"
 
 definition(
@@ -45,10 +45,10 @@ def mainPage() {
             paragraph "Notice: \nOnly Tested with Rachio Devices"
 			input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 		}
-        section("Fan/Light Combo Devices:") {
-            paragraph "This will create two devices in homekit one light and one fan"
-			input "hamptonBayFanLightList", "capability.switch", title: "Hampton Bay Fan/Light Devices (${hamptonBayFanLightList ? hamptonBayFanLightList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
-		}
+        // section("Fan/Light Combo Devices:") {
+        //     paragraph "This will create two devices in homekit one light and one fan"
+		// 	input "hamptonBayFanLightList", "capability.switch", title: "Hampton Bay Fan/Light Devices (${hamptonBayFanLightList ? hamptonBayFanLightList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+		// }
         section("All Other Devices:") {
             input "sensorList", "capability.sensor", title: "Sensor Devices: (${sensorList ? sensorList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "switchList", "capability.switch", title: "Switch Devices: (${switchList ? switchList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
