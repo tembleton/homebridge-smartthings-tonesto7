@@ -724,7 +724,7 @@ mappings {
         path("/:id/command/:command")     		{ action: [POST: "deviceCommand"] }
         path("/:id/query")						{ action: [GET: "deviceQuery"] }
         path("/:id/attribute/:attribute") 		{ action: [GET: "deviceAttribute"] }
-        path("/getUpdates")                     { action: [GET: "getChangeEvents"] }
+        // path("/getUpdates")                     { action: [GET: "getChangeEvents"] }
         path("/startDirect/:ip/:port")          { action: [GET: "enableDirectUpdates"] }
     }
 }
