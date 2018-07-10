@@ -177,6 +177,7 @@ SmartThingsPlatform.prototype = {
             'Indicator',
             // 'Video Stream',
             // 'Music Player',
+            'Speaker',
             'Audio Mute',
             'Audio Notification',
             'Audio Volume',

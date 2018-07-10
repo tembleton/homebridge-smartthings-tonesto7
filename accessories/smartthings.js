@@ -224,26 +224,28 @@ function SmartThingsAccessory(platform, device) {
             that.platform.addAttributeUsage('lock', that.deviceid, thisCharacteristic);
         }
         if (device.capabilities["Valve"] !== undefined) { //Currently only works with SmartThings Rachio Devices
+            that.platform.log("valve: " + that.device.attributes.valve);
             that.deviceGroup = "valve";
             let valveType = (device.capabilities['Irrigation'] !== undefined ? 1 : 0);
-            if (device.capabilities['Irrigation'] !== undefined) {
-                that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
-                if (device.attributes.scheduleType !== undefined) {
-                    thisCharacteristic = that.getaddService(Service.IrrigationSystem).getCharacteristic(Characteristic.ProgramMode);
-                    thisCharacteristic.on('get', function(callback) {
-                        let val = 0;
-                        if (device.attributes.scheduleType === 'program') {
-                            val = 1;
-                        } else if (device.attributes.scheduleType === 'off') {
-                            val = 0;
-                        } else if (device.attributes.scheduleType === 'manual') {
-                            val = 2;
-                        }
-                        callback(null, val);
-                    });
-                    that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
-                }
-            }
+            // if (device.capabilities['Irrigation'] !== undefined) {
+            //     that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
+            //     if (device.attributes.scheduleType !== undefined) {
+            //         thisCharacteristic = that.getaddService(Service.IrrigationSystem).getCharacteristic(Characteristic.ProgramMode);
+            //         thisCharacteristic.on('get', function(callback) {
+            //             let val = 0;
+            //             if (device.attributes.scheduleType === 'program') {
+            //                 val = 1;
+            //             } else if (device.attributes.scheduleType === 'off') {
+            //                 val = 0;
+            //             } else if (device.attributes.scheduleType === 'manual') {
+            //                 val = 2;
+            //             }
+            //             callback(null, val);
+            //         });
+            //         that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
+            //     }
+            // }
+
             //Defines the valve type (irrigation or generic)
             thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.ValveType);
             thisCharacteristic.on('get', function(callback) {
