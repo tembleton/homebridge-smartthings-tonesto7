@@ -466,7 +466,6 @@ def deviceQuery() {
                 log.error("Error Occurred Parsing ${item} ${type} ${name}, Error " + e.message)
             }
         }
-    	
     } 
     
     if (result) {
