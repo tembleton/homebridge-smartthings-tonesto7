@@ -279,105 +279,49 @@ function SmartThingsAccessory(platform, device) {
                 callback(null, 1);
             });
             that.platform.addAttributeUsage('IsConfigured', that.deviceid, thisCharacteristic);
+
             //Manages the zoneDuration Characteristic
-            if (device.attributes.zoneDuration !== undefined) {
-                thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.RemainingDuration);
-                thisCharacteristic.on('get', function(callback) {
-                    let zoneDur = device.attributes.zoneDuration || 0;
-                    if (zoneDur > 3600) {
-                        zoneDur = 3600;
-                    }
-                    // that.platform.log(that.deviceid + ' remainingDuration: ' + zoneDur);
-                    callback(null, parseInt(zoneDur));
+            // if (device.attributes.zoneDuration && device.attributes.zoneElapsed) {
+
+            var zoneDuration = (device.attributes.zoneDuration !== undefined || device.attributes.zoneDuration !== null) ? parseInt(device.attributes.zoneDuration) : 0;
+            that.platform.log("ZoneDuration Attribute: " + device.attributes.zoneDuration + " | variable: " + zoneDuration);
+            thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.RemainingDuration);
+            thisCharacteristic.on('get', function(callback) {
+                let zoneDur = zoneDuration || 0;
+                if (zoneDur > 3600) {
+                    zoneDur = 3600;
+                }
+                // that.platform.log(that.deviceid + ' remainingDuration: ' + zoneDur);
+                callback(null, parseInt(zoneDur));
+            });
+            that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
+            //Manages the zoneDuration Characteristic
+            thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.SetDuration);
+            thisCharacteristic.on('get', function(callback) {
+                let zoneDur = zoneDuration || 0;
+                if (zoneDur > 3600) {
+                    zoneDur = 3600;
+                }
+                // that.platform.log(that.deviceid + ' getRemainingDuration: ' + zoneDur);
+                callback(null, parseInt(zoneDur));
+            });
+            thisCharacteristic.on('set', function(value, callback) {
+                // that.platform.log("setZoneDuration: " + value);
+                let zoneDur = value || 0;
+                if (zoneDur > 3600) {
+                    zoneDur = 3600;
+                }
+                // that.platform.log(that.deviceid + ' setRemainingDuration value : ' + zoneDur);
+                that.platform.api.runCommand(callback, that.deviceid, 'setZoneWaterTime', {
+                    value1: parseInt(zoneDur / 60)
                 });
-                that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
-                //Manages the zoneDuration Characteristic
-                thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.SetDuration);
-                thisCharacteristic.on('get', function(callback) {
-                    let zoneDur = device.attributes.zoneDuration || 0;
-                    if (zoneDur > 3600) {
-                        zoneDur = 3600;
-                    }
-                    // that.platform.log(that.deviceid + ' remainingDuration: ' + zoneDur);
-                    callback(null, parseInt(zoneDur));
-                });
-                thisCharacteristic.on('set', function(value, callback) {
-                    let zoneDur = value || 0;
-                    if (zoneDur > 3600) {
-                        zoneDur = 3600;
-                    }
-                    // that.platform.log(that.deviceid + ' set remainingDuration value : ' + zoneDur);
-                    that.platform.api.runCommand(callback, 'setZoneWaterTime', parseInt(zoneDur));
-                });
-                that.platform.addAttributeUsage('SetDuration', that.deviceid, thisCharacteristic);
-            }
+            });
+            that.platform.addAttributeUsage('SetDuration', that.deviceid, thisCharacteristic);
+            // }
         }
         //Defines Speaker Device
         if (isSpeaker === true) {
             that.deviceGroup = 'speakers';
-            // if (that.device.attributes.status !== undefined) {
-            //     that.platform.log('speaker status: ' + that.device.attributes.status);
-            //     thisCharacteristic = that.getaddService(CommunityTypes.PlaybackDeviceService).getCharacteristic(CommunityTypes.PlaybackState);
-            //     thisCharacteristic.on('get', function(callback) {
-            //         var status = '';
-            //         switch (that.device.attributes.status) {
-            //             case 'playing':
-            //                 status = 0;
-            //                 break;
-            //             case 'paused':
-            //                 status = 1;
-            //                 break;
-            //             case 'stopped':
-            //                 status = 2;
-            //                 break;
-            //         }
-            //         callback(null, status);
-            //     });
-            //     thisCharacteristic.on('set', function(value, callback) {
-            //         if (value) {
-            //             that.platform.log('speaker status value: ' + value);
-            //             switch (value) {
-            //                 case 'Playing':
-            //                     that.platform.api.runCommand(callback, that.deviceid, 'play');
-            //                     break;
-            //                 case 'Paused':
-            //                     that.platform.api.runCommand(callback, that.deviceid, 'pause');
-            //                     break;
-            //                 case 'Stopped':
-            //                     that.platform.api.runCommand(callback, that.deviceid, 'stop');
-
-            //                     break;
-            //             }
-            //         }
-            //     });
-            //     that.platform.addAttributeUsage('playbackState', that.deviceid, thisCharacteristic);
-
-            //     thisCharacteristic = that.getaddService(CommunityTypes.AudioDeviceService).getCharacteristic(CommunityTypes.AudioVolume);
-            //     thisCharacteristic.on('get', function(callback) {
-            //         callback(null, parseInt(that.device.attributes.level || 0));
-            //     });
-            //     thisCharacteristic.on('set', function(value, callback) {
-            //         if (value > 0) {
-            //             that.platform.api.runCommand(callback, that.deviceid, 'setLevel', {
-            //                 value1: value
-            //             });
-            //         }
-            //     });
-            //     that.platform.addAttributeUsage('volume', that.deviceid, thisCharacteristic);
-
-            //     thisCharacteristic = that.getaddService(CommunityTypes.AudioDeviceService).getCharacteristic(CommunityTypes.Muting);
-            //     thisCharacteristic.on('get', function(callback) {
-            //         callback(null, that.device.attributes.mute === 'muted');
-            //     });
-            //     thisCharacteristic.on('set', function(value, callback) {
-            //         if (value) {
-            //             that.platform.api.runCommand(callback, that.deviceid, 'mute');
-            //         } else {
-            //             that.platform.api.runCommand(callback, that.deviceid, 'unmute');
-            //         }
-            //     });
-            //     that.platform.addAttributeUsage('mute', that.deviceid, thisCharacteristic);
-            // } else {
             thisCharacteristic = that.getaddService(Service.Speaker).getCharacteristic(Characteristic.Volume);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, parseInt(that.device.attributes.level || 0));
