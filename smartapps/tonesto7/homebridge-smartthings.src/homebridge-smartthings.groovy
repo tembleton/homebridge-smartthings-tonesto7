@@ -117,12 +117,17 @@ def initialize() {
     runIn(6, "registerSwitches", [overwrite: true])
 	state?.subscriptionRenewed = 0
     subscribe(location, null, HubResponseEvent, [filterEvents:false])
+    subscribe(app, onAppTouch)
     if(settings?.addShmDevice) { subscribe(location, "alarmSystemStatus", changeHandler) }
     if(settings?.modeList) { 
         subscribe(location, "mode", changeHandler)
         if(state.lastMode == null) { state?.lastMode = location.mode?.toString() }
     }
     if(settings?.routineList) { subscribe(location, "routineExecuted", changeHandler) }
+}
+
+def onAppTouch(event) {
+    updated()
 }
 
 def renderDevices() {
@@ -567,7 +572,7 @@ def ignoreTheseAttributes() {
 		'codeReport', 'scanCodes', 'verticalAccuracy', 'horizontalAccuracyMetric', 'altitudeMetric', 'latitude', 'distanceMetric', 'closestPlaceDistanceMetric',
 		'closestPlaceDistance', 'leavingPlace', 'currentPlace', 'codeChanged', 'codeLength', 'lockCodes', 'healthStatus', 'horizontalAccuracy', 'bearing', 'speedMetric',
 		'speed', 'verticalAccuracyMetric', 'altitude', 'indicatorStatus', 'todayCost', 'longitude', 'distance', 'previousPlace','closestPlace', 'places', 'minCodeLength',
-		'arrivingAtPlace', 'lastUpdatedDt'
+		'arrivingAtPlace', 'lastUpdatedDt', 'scheduleType', 'zoneStartDate'
     ]
 }
 

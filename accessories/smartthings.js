@@ -224,34 +224,23 @@ function SmartThingsAccessory(platform, device) {
             that.platform.addAttributeUsage('lock', that.deviceid, thisCharacteristic);
         }
         if (device.capabilities["Valve"] !== undefined) { //Currently only works with SmartThings Rachio Devices
-            that.platform.log("valve: " + that.device.attributes.valve);
+            this.platform.log("valve: " + that.device.attributes.valve);
             that.deviceGroup = "valve";
             let valveType = (device.capabilities['Irrigation'] !== undefined ? 1 : 0);
-            // if (device.capabilities['Irrigation'] !== undefined) {
-            //     that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
-            //     if (device.attributes.scheduleType !== undefined) {
-            //         thisCharacteristic = that.getaddService(Service.IrrigationSystem).getCharacteristic(Characteristic.ProgramMode);
-            //         thisCharacteristic.on('get', function(callback) {
-            //             let val = 0;
-            //             if (device.attributes.scheduleType === 'program') {
-            //                 val = 1;
-            //             } else if (device.attributes.scheduleType === 'off') {
-            //                 val = 0;
-            //             } else if (device.attributes.scheduleType === 'manual') {
-            //                 val = 2;
-            //             }
-            //             callback(null, val);
-            //         });
-            //         that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
-            //     }
-            // }
 
+            //Gets the inUse Characteristic
+            thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.InUse);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, that.device.attributes.valve === 'open' ? 1 : 0);
+            });
+            that.platform.addAttributeUsage('inUse', that.deviceid, thisCharacteristic);
             //Defines the valve type (irrigation or generic)
             thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.ValveType);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, valveType);
             });
             that.platform.addAttributeUsage('valveType', that.deviceid, thisCharacteristic);
+
             //Defines Valve State (opened/closed)
             thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.Active);
             thisCharacteristic.on('get', function(callback) {
@@ -267,58 +256,48 @@ function SmartThingsAccessory(platform, device) {
                 }
             });
             that.platform.addAttributeUsage('active', that.deviceid, thisCharacteristic);
-            //Gets the inUse Characteristic
-            thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.InUse);
-            thisCharacteristic.on('get', function(callback) {
-                callback(null, that.device.attributes.valve === 'open' ? 1 : 0);
-            });
-            that.platform.addAttributeUsage('inUse', that.deviceid, thisCharacteristic);
-            //Gets the inUse Characteristic
+
+            //Defines the inUse Characteristic
             thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.IsConfigured);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, 1);
             });
             that.platform.addAttributeUsage('IsConfigured', that.deviceid, thisCharacteristic);
 
-            //Manages the zoneDuration Characteristic
-            // if (device.attributes.zoneDuration && device.attributes.zoneElapsed) {
+            // //Manages the zoneDuration Characteristic (Shows Duration in Home App) Needs Work
+            // let zoneDurVal = that.device.attributes.zoneDuration ? parseInt(that.device.attributes.zoneDuration) : 0;
+            // let zoneElapVal = that.device.attributes.zoneElapsed ? parseInt(that.device.attributes.zoneElapsed) : 0;
+            // thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.RemainingDuration);
+            // thisCharacteristic.on('get', function(callback) {
+            //     let zoneDur = zoneDurVal - zoneElapVal;
+            //     if (zoneDur > 3600) {
+            //         zoneDur = 3600;
+            //     } else if (zoneDur < 0) { zoneDur = 0; }
+            //     callback(null, parseInt(zoneDur));
+            // });
+            // that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
 
-            var zoneDuration = (device.attributes.zoneDuration !== undefined || device.attributes.zoneDuration !== null) ? parseInt(device.attributes.zoneDuration) : 0;
-            that.platform.log("ZoneDuration Attribute: " + device.attributes.zoneDuration + " | variable: " + zoneDuration);
-            thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.RemainingDuration);
-            thisCharacteristic.on('get', function(callback) {
-                let zoneDur = zoneDuration || 0;
-                if (zoneDur > 3600) {
-                    zoneDur = 3600;
-                }
-                // that.platform.log(that.deviceid + ' remainingDuration: ' + zoneDur);
-                callback(null, parseInt(zoneDur));
-            });
-            that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
             //Manages the zoneDuration Characteristic
             thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.SetDuration);
             thisCharacteristic.on('get', function(callback) {
-                let zoneDur = zoneDuration || 0;
+                let zoneDur = device.attributes.zoneWaterTime || 0;
                 if (zoneDur > 3600) {
                     zoneDur = 3600;
                 }
-                // that.platform.log(that.deviceid + ' getRemainingDuration: ' + zoneDur);
                 callback(null, parseInt(zoneDur));
             });
             thisCharacteristic.on('set', function(value, callback) {
-                // that.platform.log("setZoneDuration: " + value);
                 let zoneDur = value || 0;
                 if (zoneDur > 3600) {
                     zoneDur = 3600;
                 }
-                // that.platform.log(that.deviceid + ' setRemainingDuration value : ' + zoneDur);
                 that.platform.api.runCommand(callback, that.deviceid, 'setZoneWaterTime', {
                     value1: parseInt(zoneDur / 60)
                 });
             });
-            that.platform.addAttributeUsage('SetDuration', that.deviceid, thisCharacteristic);
-            // }
+            that.platform.addAttributeUsage('zoneDuration', that.deviceid, thisCharacteristic);
         }
+
         //Defines Speaker Device
         if (isSpeaker === true) {
             that.deviceGroup = 'speakers';
