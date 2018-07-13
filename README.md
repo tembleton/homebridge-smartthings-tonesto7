@@ -4,7 +4,7 @@ This is based off of @pdlove homebridge-smartthings
 
 [![npm version](https://badge.fury.io/js/homebridge-smartthings-tonesto7.svg)](https://badge.fury.io/js/homebridge-smartthings-tonesto7)
 
-**```Current SmartApp version: 1.1.4```**
+**```Current SmartApp version: 1.1.5```**
 
 <br>
 
@@ -19,6 +19,8 @@ This is based off of @pdlove homebridge-smartthings
 ***v1.1.3*** - App Cleanups.  Added lot's of features.
 
 ***v1.1.4*** - Removed Hampton Fan input (No longer Necessary with My modified Device Handler).
+
+***v1.1.5*** - Disabled Irrigation for now until i can make it work more consistent.
 
 #### Homebridge Plugin:
 
