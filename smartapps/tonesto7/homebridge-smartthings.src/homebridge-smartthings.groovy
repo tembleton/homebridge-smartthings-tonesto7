@@ -36,19 +36,16 @@ def mainPage() {
             paragraph title: "NOTICE", "Any Device Changes will require a restart of the Homebridge Service", required: true, state: null
         }
         section("Define Specific Categories:") {
-            paragraph "These Categories will add the necessary capabilities to make sure they are recognized by HomeKit as the specific device type", state: "complete"
+            paragraph "These Categories will define the necessary capabilities to make sure they are recognized by HomeKit as the desired device type", state: "complete"
             input "lightList", "capability.switch", title: "Lights: (${lightList ? lightList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "fanList", "capability.switch", title: "Fans: (${fanList ? fanList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "speakerList", "capability.switch", title: "Speakers: (${speakerList ? speakerList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
         }
         section("Irrigation Devices:") {
             paragraph "Notice: \nOnly Tested with Rachio Devices"
-			input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
+            paragraph "Disabled Support because of reliability issues"
+			// input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 		}
-        // section("Fan/Light Combo Devices:") {
-        //     paragraph "This will create two devices in homekit one light and one fan"
-		// 	input "hamptonBayFanLightList", "capability.switch", title: "Hampton Bay Fan/Light Devices (${hamptonBayFanLightList ? hamptonBayFanLightList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
-		// }
         section("All Other Devices:") {
             input "sensorList", "capability.sensor", title: "Sensor Devices: (${sensorList ? sensorList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
             input "switchList", "capability.switch", title: "Switch Devices: (${switchList ? switchList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
@@ -86,7 +83,7 @@ def mainPage() {
 
 def getDeviceCnt() {
     def devices = []
-    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "hamptonBayFanLightList"]
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList"]
     items?.each { item ->   
         if(settings[item]?.size() > 0) {     
             devices = devices + settings[item]
@@ -132,7 +129,7 @@ def onAppTouch(event) {
 
 def renderDevices() {
     def deviceData = []
-    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "hamptonBayFanLightList", "modeList"]
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "modeList"]
     items?.each { item ->   
         if(settings[item]?.size()) {
             settings[item]?.each { dev->
@@ -242,10 +239,8 @@ def findDevice(paramid) {
     device = fanList.find { it?.id == paramid }
     if (device) return device
     device = speakerList.find { it?.id == paramid }
-    if (device) return device
-    device = irrigationList.find { it?.id == paramid }
-    if (device) return device
-    device = hamptonBayFanLightList.find { it?.id == paramid }
+    // if (device) return device
+    // device = irrigationList.find { it?.id == paramid }
     return device
     // device = momentaryList.find { it?.id == paramid }
     // if (device) return device
@@ -255,7 +250,7 @@ def findDevice(paramid) {
 }
 
 def findDeviceNew(paramid, type=null) {
-    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "irrigationList", "momentaryList", "buttonList"]
+    def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "momentaryList", "buttonList"]
     if(type) { items = ["${type}"] }
     items?.each { item ->   
         if(settings[item]?.size()) {
@@ -356,11 +351,7 @@ def deviceCommand() {
     if(settings?.addShmDevice != false && params?.id == "alarmSystemStatus") {
         setShmMode(command)
         CommandReply("Success", "Security Alarm, Command $command")
-    }  else if (settings?.hamptonBayFanLightList && command == "fanspeed") {
-        def value1 = request.JSON?.value1
-        if(value1 && device?.hasCommand(value1)) { dev?."${value1}"() }
-        CommandReply("Success", "Routine Device, Command $command")
-    } else if (settings?.modeList && command == "mode") {
+    }  else if (settings?.modeList && command == "mode") {
         def value1 = request.JSON?.value1
         log.debug "value1: ${value1}"
         if(value1) { changeMode(value1) }
@@ -488,9 +479,9 @@ def deviceQuery() {
 
 def deviceCapabilityList(device) {
     def items = device?.capabilities?.collectEntries { capability-> [ (capability?.name):1 ] }
-    if(settings?.irrigationList?.find { it?.id == device?.id }) { 
-		items["Irrigation"] = 1
-    }
+    // if(settings?.irrigationList?.find { it?.id == device?.id }) { 
+	// 	items["Irrigation"] = 1
+    // }
     if(settings?.lightList.find { it?.id == device?.id }) {
         items["LightBulb"] = 1
     }
@@ -499,11 +490,6 @@ def deviceCapabilityList(device) {
     }
     if(settings?.speakerList.find { it?.id == device?.id }) {
         items["Speaker"] = 1
-    }
-    if(settings?.hamptonBayFanLightList.find { it?.id == device?.id } && items["Switch Level"] && items["Fan Speed"]) {
-        items["Fan Light"] = 1
-        items["LightBulb"] = 1
-        items["Fan"] = 1
     }
     if(settings?.noTemp && items["Temperature Measurement"] && (items["Contact Sensor"] != null || items["Water Sensor"] != null)) {
         items.remove("Temperature Measurement")
@@ -541,8 +527,8 @@ def registerDevices() {
     //This has to be done at startup because it takes too long for a normal command.
     log.debug "Registering (${settings?.deviceList?.size() ?: 0}) Other Devices"
 	registerChangeHandler(settings?.deviceList)
-    log.debug "Registering (${settings?.irrigationList?.size() ?: 0}) Sprinklers"
-    registerChangeHandler(settings?.irrigationList)
+    // log.debug "Registering (${settings?.irrigationList?.size() ?: 0}) Sprinklers"
+    // registerChangeHandler(settings?.irrigationList)
 }
 
 def registerSensors() {
@@ -551,8 +537,6 @@ def registerSensors() {
     registerChangeHandler(settings?.sensorList)
     log.debug "Registering (${settings?.speakerList?.size() ?: 0}) Speakers"
     registerChangeHandler(settings?.speakerList)
-    log.debug "Registering (${settings?.hamptonBayFanLightList?.size() ?: 0}) FanLights"
-    registerChangeHandler(settings?.hamptonBayFanLightList)
 }
 
 def registerSwitches() {
@@ -572,7 +556,7 @@ def ignoreTheseAttributes() {
 		'codeReport', 'scanCodes', 'verticalAccuracy', 'horizontalAccuracyMetric', 'altitudeMetric', 'latitude', 'distanceMetric', 'closestPlaceDistanceMetric',
 		'closestPlaceDistance', 'leavingPlace', 'currentPlace', 'codeChanged', 'codeLength', 'lockCodes', 'healthStatus', 'horizontalAccuracy', 'bearing', 'speedMetric',
 		'speed', 'verticalAccuracyMetric', 'altitude', 'indicatorStatus', 'todayCost', 'longitude', 'distance', 'previousPlace','closestPlace', 'places', 'minCodeLength',
-		'arrivingAtPlace', 'lastUpdatedDt', 'scheduleType', 'zoneStartDate', 'zoneElapsed', 'zoneDuration'
+		'arrivingAtPlace', 'lastUpdatedDt', 'scheduleType', 'zoneStartDate', 'zoneElapsed', 'zoneDuration', 'watering'
     ]
 }
 
