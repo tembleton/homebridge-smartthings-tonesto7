@@ -28,6 +28,8 @@ This is based off of @pdlove homebridge-smartthings
 
 ***v1.1.7*** - Updated the README
 
+***v1.1.8*** - Cleanup of the Irrigation code
+
 
 <br>
 
