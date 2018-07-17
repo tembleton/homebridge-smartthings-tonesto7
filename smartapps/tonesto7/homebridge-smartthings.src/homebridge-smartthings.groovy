@@ -374,18 +374,20 @@ def deviceCommand() {
             def value1 = request.JSON?.value1
             def value2 = request.JSON?.value2
             try {
-                if (value2) {
+                if (value2 != null) {
                     device."$command"(value1,value2)
-                } else if (value1) {
+                    log.info("Command Successful for Device ${device.displayName} | Command ${command}($value1, $value2)")
+                } else if (value1 != null) {
                     device."$command"(value1)
+                    log.info("Command Successful for Device ${device.displayName} | Command ${command}($value1)")
                 } else {
                     device."$command"()
+                    log.info("Command Successful for Device ${device.displayName} | Command ${command}()")
                 }
-                log.info("Command Successful for Device "+device.displayName+", Command "+command)
-                CommandReply("Success", "Device "+device.displayName+", Command "+command)
+                CommandReply("Success", "Device ${device.displayName} | Command ${command}()")
             } catch (e) {
-                log.error("Error Occurred For Device "+device.displayName+", Command "+command)
-                CommandReply("Failure", "Error Occurred For Device "+device.displayName+", Command "+command)
+                log.error("Error Occurred for Device ${device.displayName} | Command ${command}()")
+                CommandReply("Failure", "Error Occurred For Device ${device.displayName} | Command ${command}()")
             }
         }
     }
