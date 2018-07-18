@@ -32,6 +32,8 @@ This is based off of @pdlove homebridge-smartthings
 
 ***v1.1.8*** - Cleanup of the Irrigation code
 
+***v1.1.9*** - Forgot to remove some logging
+
 
 <br>
 
