@@ -36,6 +36,15 @@ function SmartThingsAccessory(platform, device) {
     var id = uuid.generate(idKey);
     Accessory.call(this, this.name, id);
     var that = this;
+
+    //Removing excluded capabilities from config
+    for (var i = 0; i < device.excludedCapabilities.length; i++) {
+        let excludedCapability = device.excludedCapabilities[i];
+        if (device.capabilities[excludedCapability] !== undefined) {
+            platform.log.debug("Removing capability: " + excludedCapability + " for device: " + device.name);
+            delete device.capabilities[excludedCapability];
+        }
+    }
     that.getService(Service.AccessoryInformation)
         .setCharacteristic(Characteristic.Identify, (that.device.capabilities['Switch'] !== undefined))
         .setCharacteristic(Characteristic.FirmwareRevision, that.device.firmwareVersion)
@@ -64,7 +73,7 @@ function SmartThingsAccessory(platform, device) {
     let isSpeaker = (device.capabilities['Speaker'] !== undefined);
     if (device && device.capabilities) {
         if (device.capabilities['Switch Level'] !== undefined && !isSpeaker && !isFan) {
-            if (device.commands.levelOpenClose) {
+            if (device.commands.levelOpenClose || device.commands.presetPosition) {
                 // This is a Window Shade
                 that.deviceGroup = 'shades';
                 thisCharacteristic = that.getaddService(Service.WindowCovering).getCharacteristic(Characteristic.TargetPosition);
@@ -501,10 +510,10 @@ function SmartThingsAccessory(platform, device) {
             that.deviceGroup = 'carbonDioxide';
             thisCharacteristic = that.getaddService(Service.CarbonDioxideSensor).getCharacteristic(Characteristic.CarbonDioxideDetected);
             thisCharacteristic.on('get', function(callback) {
-                if (that.device.attributes.carbonDioxideMeasurement > 0) {
-                    callback(null, Characteristic.CarbonDioxideDetected.CO2_LEVELS_ABNORMAL);
-                } else {
+                if (that.device.attributes.carbonDioxideMeasurement < 2000) {
                     callback(null, Characteristic.CarbonDioxideDetected.CO2_LEVELS_NORMAL);
+                } else {
+                    callback(null, Characteristic.CarbonDioxideDetected.CO2_LEVELS_ABNORMAL);
                 }
             });
             that.platform.addAttributeUsage('carbonDioxide', that.deviceid, thisCharacteristic);

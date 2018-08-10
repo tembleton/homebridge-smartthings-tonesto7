@@ -34,6 +34,8 @@ This is based off of @pdlove homebridge-smartthings
 
 ***v1.1.9*** - Forgot to remove some logging
 
+***v1.2.0*** - Added in capability exclusion feature to match @pdlove plugin
+
 
 <br>
 
@@ -114,7 +116,7 @@ Installation comes in two parts:
 
   <h4 style="padding: 0em .6em; margin-bottom: 5px;"><u>Example of all settings. Not all settings are required. Read the breakdown below</u></h4>
    
-   <div style=" overflow:auto;width:auto;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #f8f8f2">{</span>
+   <div style="overflow:auto;width:auto;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #f8f8f2">{</span>
    <span style="color: #f92672">&quot;platform&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;SmartThings&quot;</span><span style="color: #f8f8f2">,</span> 
    <span style="color: #f92672">&quot;name&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;SmartThings&quot;</span><span style="color: #f8f8f2">,</span>
    <span style="color: #f92672">&quot;app_url&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;https://graph.api.smartthings.com:443/api/smartapps/installations/&quot;</span><span style="color: #f8f8f2">,</span>
@@ -124,8 +126,13 @@ Installation comes in two parts:
    <span style="color: #f92672">&quot;update_method&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;direct&quot;</span><span style="color: #f8f8f2">,</span>
    <span style="color: #f92672">&quot;direct_ip&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;10.0.0.70&quot;</span><span style="color: #f8f8f2">,</span>
    <span style="color: #f92672">&quot;direct_port&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #ae81ff">8000</span><span style="color: #f8f8f2">,</span>
-<span style="color: #f8f8f2">}</span>
-</pre></div>
+   <span style="color: #f92672">&quot;excluded_capabilities&quot;</span><span style="color: #f8f8f2">: {</span>
+   <span style="color: lightblue">    &quot;SMARTTHINGS-DEVICE-ID-1&quot;</span><span style="color: #f8f8f2">: [</span>
+   <span style="color: orange">       &quot;Switch&quot;</span><span style="color: #f8f8f2">,</span>
+   <span style="color: orange">       &quot;Temperature Measurement&quot;</span>
+   <span style="color: #f8f8f2">    ]</span>
+   <span style="color: #f8f8f2">}<br>}</span>
+   </pre></div>
 
 
  * <p><u>platform</u> & <u>name</u>  <small style="color: orange; font-weight: 600;"><i>Required</i></small><br>
@@ -140,3 +147,5 @@ Installation comes in two parts:
  * <p><u>direct_port</u>  <small style="color: #f92672; font-weight: 600;"><i>Optional</i></small><br>
    Defaults to 8000<br><small style="color: gray;">This is the port that homebridge-smartthings plugin will listen on for traffic from your hub. Make sure your firewall allows incoming traffic on this port from your hub's IP address.</small></p>
 
+ * <p><u>excluded_capabilities</u>  <small style="color: #f92672; font-weight: 600;"><i>Optional</i></small><br>
+   Defaults to None<br><small style="color: gray;">Specify the SmartThings device by ID and the associated capabilities you want homebridge-smartthings to ignore<br>This prevents a SmartThings device creating unwanted or redundant HomeKit accessories</small></p>
