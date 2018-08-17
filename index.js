@@ -22,6 +22,7 @@ function SmartThingsPlatform(log, config) {
     this.app_url = config['app_url'];
     this.app_id = config['app_id'];
     this.access_token = config['access_token'];
+    this.hub_ip = config["hub_ip"];
     this.excludedCapabilities = config["excluded_capabilities"] || [];
 
     // This is how often it does a full refresh
@@ -197,7 +198,7 @@ SmartThingsPlatform.prototype = {
         ];
         this.temperature_unit = 'F';
 
-        smartthings.init(this.app_url, this.app_id, this.access_token);
+        smartthings.init(this.app_url, this.app_id, this.access_token, this.hub_ip);
         that.log('update_method: ' + that.update_method);
         this.reloadData(function(foundAccessories) {
             that.log('Unknown Capabilities: ' + JSON.stringify(that.unknownCapabilities));
