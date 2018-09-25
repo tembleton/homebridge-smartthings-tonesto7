@@ -1,5 +1,6 @@
 var inherits = require('util').inherits;
 var Accessory, Service, Characteristic, uuid, CommunityTypes;
+var routineState = false;
 
 /*
  *   SmartThings Accessory
@@ -24,6 +25,7 @@ module.exports.SmartThingsAccessory = SmartThingsAccessory;
 function toTitleCase(str) {
     return str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 }
+
 
 function SmartThingsAccessory(platform, device) {
     // console.log("SmartThingsAccessory: ", platform, device);
@@ -68,11 +70,13 @@ function SmartThingsAccessory(platform, device) {
     that.deviceGroup = 'unknown'; // that way we can easily tell if we set a device group
     var thisCharacteristic;
     // platform.log(JSON.stringify(device));
+    let isMode = (device.capabilities['Mode'] !== undefined);
+    let isRoutine = (device.capabilities['Routine'] !== undefined);
     let isFan = (device.capabilities['Fan'] !== undefined || that.device.capabilities['Fan Light'] !== undefined || device.commands.lowSpeed !== undefined);
     let isLight = (device.capabilities['LightBulb'] !== undefined || device.capabilities['Bulb'] !== undefined || that.device.capabilities['Fan Light'] !== undefined || device.name.includes('light'));
     let isSpeaker = (device.capabilities['Speaker'] !== undefined);
     if (device && device.capabilities) {
-        if (device.capabilities['Switch Level'] !== undefined && !isSpeaker && !isFan) {
+        if (device.capabilities['Switch Level'] !== undefined && !isSpeaker && !isFan && !isMode && !isRoutine) {
             if (device.commands.levelOpenClose || device.commands.presetPosition) {
                 // This is a Window Shade
                 that.deviceGroup = 'shades';
@@ -336,7 +340,6 @@ function SmartThingsAccessory(platform, device) {
                 }
             });
             that.platform.addAttributeUsage('mute', that.deviceid, thisCharacteristic);
-            // }
         }
         //Handles Standalone Fan with no levels
         if (isFan === true && (that.device.capabilities['Fan Light'] !== undefined || that.deviceGroup === 'unknown')) {
@@ -373,7 +376,7 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
             }
         }
-        if (device.capabilities['Mode'] !== undefined) {
+        if (isMode === true) {
             that.deviceGroup = 'mode';
             that.platform.log('Mode: (' + that.name + ')');
             thisCharacteristic = that.getaddService(Service.Switch).getCharacteristic(Characteristic.On);
@@ -389,18 +392,23 @@ function SmartThingsAccessory(platform, device) {
             });
             that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
         }
-        if (device.capabilities['Routine'] !== undefined) {
+        if (isRoutine === true) {
             that.deviceGroup = 'routine';
             that.platform.log('Routine: (' + that.name + ')');
             thisCharacteristic = that.getaddService(Service.Switch).getCharacteristic(Characteristic.On);
             thisCharacteristic.on('get', function(callback) {
-                callback(null, that.device.attributes.switch);
+                callback(null, that.device.attributes.switch === 'on');
             });
             thisCharacteristic.on('set', function(value, callback) {
-                if (value && that.device.attributes.switch === 'off') {
+                if (value) {
                     that.platform.api.runCommand(callback, that.deviceid, 'routine', {
                         value1: that.name.toString()
                     });
+                    setTimeout(
+                        function() {
+                            console.log("routineOff...");
+                            that.getaddService(Service.Switch).setCharacteristic(Characteristic.On, false);
+                        }, 2000);
                 }
             });
             that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);

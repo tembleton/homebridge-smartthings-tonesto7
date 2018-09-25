@@ -6,7 +6,7 @@
  */
  
 import groovy.transform.Field
-@Field String appVersion = "1.1.7"
+@Field String appVersion = "1.1.8"
 @Field String appIconUrl = "https://raw.githubusercontent.com/pdlove/homebridge-smartthings/master/smartapps/JSON%401.png"
 
 definition(
@@ -586,7 +586,6 @@ def changeHandler(evt) {
 	def value = evt?.value
 	def dt = evt?.date
 	def sendEvt = true
-	def delay = false
 	switch(evt?.name) {
 		case "alarmSystemStatus":
 			deviceid = evt?.name
@@ -596,16 +595,14 @@ def changeHandler(evt) {
 		case "mode":
 			settings?.modeList?.each { id->
 				def md = getModeById(id)
-				if(md && md?.id ) { sendItems?.push([evtSource: "MODE", evtDeviceName: "Mode - ${md?.name}", evtDeviceId: md?.id, evtAttr: "switch", evtValue: modeSwitchState(md?.name), evtUnit: "", evtDate: dt]) }
+				if(md && md?.id) { sendItems?.push([evtSource: "MODE", evtDeviceName: "Mode - ${md?.name}", evtDeviceId: md?.id, evtAttr: "switch", evtValue: modeSwitchState(md?.name), evtUnit: "", evtDate: dt]) }
 			}
 			break
 		case "routineExecuted":
-			log.trace "routineExecuted: ${state?.lastRoutine} | src: ${src} | name: ${deviceName}"
 			settings?.routineList?.each { id->
 				def rt = getRoutineById(id)
-				if(rt && rt?.id) {// && rt?.label == deviceName) {
-					sendItems?.push([evtSource: "ROUTINE", evtDeviceName: "Mode - ${rt?.label}", evtDeviceId: rt?.id, evtAttr: "switch", evtValue: "off", evtUnit: "", evtDate: dt])
-					// delay = true
+				if(rt && rt?.id) {
+					sendItems?.push([evtSource: "ROUTINE", evtDeviceName: "Routine - ${rt?.label}", evtDeviceId: rt?.id, evtAttr: "switch", evtValue: "off", evtUnit: "", evtDate: dt])
 				} 
 			}
 			break
@@ -615,42 +612,30 @@ def changeHandler(evt) {
 	}
 	if (sendEvt && state?.directIP != "" && sendItems?.size()) {
 		//Send Using the Direct Mechanism
-		if(delay) {
-			runIn(10, "sendDataToHomebridge", [data: [sendItems: sendItems]])
-		} else {
-			Map data = [:]
-			data?.sendItems = sendItems
-			sendDataToHomebridge(data)
+		sendItems?.each { send->
+			if(settings?.showLogs) { 
+				log.debug "Sending${" ${send?.evtSource}" ?: ""} Event (${send?.evtDeviceName} | ${send?.evtAttr.toUpperCase()}: ${send?.evtValue}${send?.evtUnit}) to Homebridge at (${state?.directIP}:${state?.directPort})" 
+			}
+			
+			def result = new physicalgraph.device.HubAction(
+				method: "POST",
+				path: "/update",
+				headers: [
+					HOST: "${state?.directIP}:${state?.directPort}",
+					'Content-Type': 'application/json'
+				],
+				body: [
+					change_name: send?.evtDeviceName,
+					change_device: send?.evtDeviceId,
+					change_attribute: send?.evtAttr,
+					change_value: send?.evtValue,
+					change_date: send?.evtDate
+				]
+			)
+			sendHubCommand(result)
 		}
 	}
 }
-
-private sendDataToHomebridge(data) {
-	List sendItems = data?.sendItems ?: []
-	sendItems?.each { send->
-		if(settings?.showLogs) { 
-			log.debug "Sending${" ${send?.evtSource}" ?: ""} Event (${send?.evtDeviceName} | ${send?.evtAttr.toUpperCase()}: ${send?.evtValue}${send?.evtUnit}) to Homebridge at (${state?.directIP}:${state?.directPort})" 
-		}
-		
-		def result = new physicalgraph.device.HubAction(
-			method: "POST",
-			path: "/update",
-			headers: [
-				HOST: "${state?.directIP}:${state?.directPort}",
-				'Content-Type': 'application/json'
-			],
-			body: [
-				change_name: send?.evtDeviceName,
-				change_device: send?.evtDeviceId,
-				change_attribute: send?.evtAttr,
-				change_value: send?.evtValue,
-				change_date: send?.evtDate
-			]
-		)
-		sendHubCommand(result)
-	}
-}
-
 
 def getModeById(mId) {
 	return location?.getModes()?.find{it?.id == mId}
