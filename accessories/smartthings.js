@@ -389,6 +389,22 @@ function SmartThingsAccessory(platform, device) {
             });
             that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
         }
+        if (device.capabilities['Routine'] !== undefined) {
+            that.deviceGroup = 'routine';
+            that.platform.log('Routine: (' + that.name + ')');
+            thisCharacteristic = that.getaddService(Service.Switch).getCharacteristic(Characteristic.On);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, that.device.attributes.switch);
+            });
+            thisCharacteristic.on('set', function(value, callback) {
+                if (value && that.device.attributes.switch === 'off') {
+                    that.platform.api.runCommand(callback, that.deviceid, 'routine', {
+                        value1: that.name.toString()
+                    });
+                }
+            });
+            that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
+        }
         if (device.capabilities['Button'] !== undefined) {
             that.deviceGroup = 'button';
             that.platform.log('Button: (' + that.name + ')');
@@ -399,21 +415,6 @@ function SmartThingsAccessory(platform, device) {
             thisCharacteristic.on('set', function(value, callback) {
                 if (value && that.device.attributes.switch === 'off') {
                     that.platform.api.runCommand(callback, that.deviceid, 'button');
-                }
-            });
-            that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
-        }
-        if (device.capabilities['Routine'] !== undefined) {
-            that.deviceGroup = 'routine';
-            thisCharacteristic = that.getaddService(Service.Switch).getCharacteristic(Characteristic.On);
-            thisCharacteristic.on('get', function(callback) {
-                callback(null, that.device.attributes.switch === 'on');
-            });
-            thisCharacteristic.on('set', function(value, callback) {
-                if (value && that.device.attributes.switch === 'off') {
-                    that.platform.api.runCommand(callback, that.deviceid, 'routine', {
-                        value1: '"' + that.name + '"'
-                    });
                 }
             });
             that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);

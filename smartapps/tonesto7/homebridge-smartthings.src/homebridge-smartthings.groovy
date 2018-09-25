@@ -6,7 +6,7 @@
  */
  
 import groovy.transform.Field
-@Field String appVersion = "1.1.6"
+@Field String appVersion = "1.1.7"
 @Field String appIconUrl = "https://raw.githubusercontent.com/pdlove/homebridge-smartthings/master/smartapps/JSON%401.png"
 
 definition(
@@ -41,11 +41,6 @@ def mainPage() {
 			input "fanList", "capability.switch", title: "Fans: (${fanList ? fanList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 			input "speakerList", "capability.switch", title: "Speakers: (${speakerList ? speakerList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 		}
-		section("Irrigation Devices:") {
-			paragraph "Notice: \nOnly Tested with Rachio Devices"
-			paragraph "Disabled Support because of reliability issues"
-			// input "irrigationList", "capability.valve", title: "Irrigation Devices (${irrigationList ? irrigationList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
-		}
 		section("All Other Devices:") {
 			input "sensorList", "capability.sensor", title: "Sensor Devices: (${sensorList ? sensorList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
 			input "switchList", "capability.switch", title: "Switch Devices: (${switchList ? switchList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false
@@ -64,8 +59,8 @@ def mainPage() {
 			paragraph title: "What are these for?", "HomeKit will create a switch device for each mode.  The switch will be ON for the active mode.", state: "complete"
 			def modes = location?.modes?.sort{it?.name}?.collect { [(it?.id):it?.name] }
 			input "modeList", "enum", title: "Create Devices for these Modes", required: false, multiple: true, options: modes, submitOnChange: true
-			// def routines = location.helloHome?.getPhrases()?.sort { it?.label }?.collect { [(it?.id):it?.label] }
-			// input "routineList", "enum", title: "Create Devices for these Routines", required: false, multiple: true, options: routines, submitOnChange: true
+			def routines = location.helloHome?.getPhrases()?.sort { it?.label }?.collect { [(it?.id):it?.label] }
+			input "routineList", "enum", title: "Create Devices for these Routines", required: false, multiple: true, options: routines, submitOnChange: true
 		}
 		section("Smart Home Monitor Support (SHM)") {
 			input "addShmDevice", "bool", title: "Allow SHM Control in HomeKit?", required: false, defaultValue: true, submitOnChange: true
@@ -83,7 +78,7 @@ def mainPage() {
 
 def getDeviceCnt() {
 	def devices = []
-	def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList"]
+	def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "modeList", "routineList"]
 	items?.each { item ->   
 		if(settings[item]?.size() > 0) {     
 			devices = devices + settings[item]
@@ -113,15 +108,19 @@ def initialize() {
    	runIn(4, "registerSensors", [overwrite: true])
 	runIn(6, "registerSwitches", [overwrite: true])
 	state?.subscriptionRenewed = 0
-	subscribe(location, null, lanEventHandler, [filterEvents:false])
-	// subscribe(location, null, HubResponseEvent, [filterEvents:false])
+	// subscribe(location, null, lanEventHandler, [filterEvents:false])
+	subscribe(location, null, HubResponseEvent, [filterEvents:false])
 	subscribe(app, onAppTouch)
 	if(settings?.addShmDevice) { subscribe(location, "alarmSystemStatus", changeHandler) }
 	if(settings?.modeList) { 
+		log.debug "Registering (${settings?.modeList?.size() ?: 0}) Virtual Mode Devices"
 		subscribe(location, "mode", changeHandler)
 		if(state.lastMode == null) { state?.lastMode = location.mode?.toString() }
 	}
-	if(settings?.routineList) { subscribe(location, "routineExecuted", changeHandler) }
+	if(settings?.routineList) { 
+		log.debug "Registering (${settings?.routineList?.size() ?: 0}) Virtual Routine Devices"
+		subscribe(location, "routineExecuted", changeHandler) 
+	}
 }
 
 def onAppTouch(event) {
@@ -130,7 +129,7 @@ def onAppTouch(event) {
 
 def renderDevices() {
 	def deviceData = []
-	def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "modeList"]
+	def items = ["deviceList", "sensorList", "switchList", "lightList", "fanList", "speakerList", "modeList", "routineList"]
 	items?.each { item ->   
 		if(settings[item]?.size()) {
 			settings[item]?.each { dev->
@@ -161,7 +160,7 @@ def getDeviceData(type, sItem) {
 			curType = "Routine"
 			obj = getRoutineById(sItem)
 			if(obj) {
-				name = obj?.label
+				name = "Routine - " + obj?.label
 				attrVal = "off"
 			}
 			break
@@ -170,7 +169,7 @@ def getDeviceData(type, sItem) {
 			curType = "Mode"
 			obj = getModeById(sItem)
 			if(obj) {
-				name = obj?.name
+				name = "Mode - " + obj?.name
 				attrVal = modeSwitchState(obj?.name)
 			}
 			break
@@ -240,8 +239,6 @@ def findDevice(paramid) {
 	device = fanList.find { it?.id == paramid }
 	if (device) return device
 	device = speakerList.find { it?.id == paramid }
-	// if (device) return device
-	// device = irrigationList.find { it?.id == paramid }
 	return device
 	// device = momentaryList.find { it?.id == paramid }
 	// if (device) return device
@@ -354,11 +351,12 @@ def deviceCommand() {
 		CommandReply("Success", "Security Alarm, Command $command")
 	}  else if (settings?.modeList && command == "mode") {
 		def value1 = request.JSON?.value1
-		log.debug "value1: ${value1}"
-		if(value1) { changeMode(value1) }
+		log.debug "Virtual Mode Received: ${value1}"
+		if(value1) { changeMode(value1 as String) }
 		CommandReply("Success", "Mode Device, Command $command")
 	} else if (settings?.routineList && command == "routine") {
 		def value1 = request.JSON?.value1
+		log.debug "Virtual Routine Received: ${value1}"
 		if(value1) { runRoutine(value1) }
 		CommandReply("Success", "Routine Device, Command $command")
 	} else if ((settings?.buttonList || settings?.momentaryList) && command == "button") {
@@ -401,6 +399,7 @@ def setShmMode(mode) {
 
 def changeMode(mode) {
 	if(mode) {
+		mode = mode.replace("Mode - ", "")
 		log.info "Setting the Location Mode to (${mode})..."
 		setLocationMode(mode)
 		state.lastMode = mode
@@ -409,6 +408,7 @@ def changeMode(mode) {
 
 def runRoutine(rt) {
 	if(rt) {
+		rt = rt.replace("Routine - ", "")
 		log.info "Executing the (${rt}) Routine..."
 		location.helloHome?.execute(rt)
 	}
@@ -482,9 +482,6 @@ def deviceQuery() {
 
 def deviceCapabilityList(device) {
 	def items = device?.capabilities?.collectEntries { capability-> [ (capability?.name):1 ] }
-	// if(settings?.irrigationList?.find { it?.id == device?.id }) { 
-	// 	items["Irrigation"] = 1
-	// }
 	if(settings?.lightList.find { it?.id == device?.id }) {
 		items["LightBulb"] = 1
 	}
@@ -530,8 +527,6 @@ def registerDevices() {
 	//This has to be done at startup because it takes too long for a normal command.
 	log.debug "Registering (${settings?.deviceList?.size() ?: 0}) Other Devices"
 	registerChangeHandler(settings?.deviceList)
-	// log.debug "Registering (${settings?.irrigationList?.size() ?: 0}) Sprinklers"
-	// registerChangeHandler(settings?.irrigationList)
 }
 
 def registerSensors() {
@@ -550,6 +545,7 @@ def registerSwitches() {
 	registerChangeHandler(settings?.lightList)
 	log.debug "Registering (${settings?.fanList?.size() ?: 0}) Fans"
 	registerChangeHandler(settings?.fanList)
+	log.debug "Registered (${getDeviceCnt()} Devices)"
 }
 
 def ignoreTheseAttributes() {
@@ -590,7 +586,7 @@ def changeHandler(evt) {
 	def value = evt?.value
 	def dt = evt?.date
 	def sendEvt = true
-	
+	def delay = false
 	switch(evt?.name) {
 		case "alarmSystemStatus":
 			deviceid = evt?.name
@@ -600,46 +596,58 @@ def changeHandler(evt) {
 		case "mode":
 			settings?.modeList?.each { id->
 				def md = getModeById(id)
-				if(md && md?.id ) { sendItems?.push([evtSource: "MODE", evtDeviceName: md?.name, evtDeviceId: md?.id, evtAttr: "switch", evtValue: modeSwitchState(md?.name), evtUnit: "", evtDate: dt]) }
+				if(md && md?.id ) { sendItems?.push([evtSource: "MODE", evtDeviceName: "Mode - ${md?.name}", evtDeviceId: md?.id, evtAttr: "switch", evtValue: modeSwitchState(md?.name), evtUnit: "", evtDate: dt]) }
 			}
 			break
 		case "routineExecuted":
+			log.trace "routineExecuted: ${state?.lastRoutine} | src: ${src} | name: ${deviceName}"
 			settings?.routineList?.each { id->
 				def rt = getRoutineById(id)
-				if(rt && rt?.id ) { sendItems?.push([evtSource: "ROUTINE", evtDeviceName: rt?.label, evtDeviceId: rt?.id, evtAttr: "switch", evtValue: "off", evtUnit: "", evtDate: dt]) } 
+				if(rt && rt?.id) {// && rt?.label == deviceName) {
+					sendItems?.push([evtSource: "ROUTINE", evtDeviceName: "Mode - ${rt?.label}", evtDeviceId: rt?.id, evtAttr: "switch", evtValue: "off", evtUnit: "", evtDate: dt])
+					// delay = true
+				} 
 			}
 			break
 		default:
-			// if(findDeviceNew(deviceid, "buttonList") || findDeviceNew(deviceid, "momentaryList")) {
-			//     sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: "off", evtUnit: evt?.unit ?: "", evtDate: dt])
-			// } else {
-				sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: value, evtUnit: evt?.unit ?: "", evtDate: dt])
-			// }
+			sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: value, evtUnit: evt?.unit ?: "", evtDate: dt])
 			break
 	}
 	if (sendEvt && state?.directIP != "" && sendItems?.size()) {
 		//Send Using the Direct Mechanism
-		sendItems?.each { send->
-			if(settings?.showLogs) { 
-				log.debug "Sending${" ${send?.evtSource}" ?: ""} Event (${send?.evtDeviceName} | ${send?.evtAttr.toUpperCase()}: ${send?.evtValue}${send?.evtUnit}) to Homebridge at (${state?.directIP}:${state?.directPort})" 
-			}
-			def result = new physicalgraph.device.HubAction(
-				method: "POST",
-				path: "/update",
-				headers: [
-					HOST: "${state?.directIP}:${state?.directPort}",
-					'Content-Type': 'application/json'
-				],
-				body: [
-					change_name: send?.evtDeviceName,
-					change_device: send?.evtDeviceId,
-					change_attribute: send?.evtAttr,
-					change_value: send?.evtValue,
-					change_date: send?.evtDate
-				]
-			)
-			sendHubCommand(result)
+		if(delay) {
+			runIn(10, "sendDataToHomebridge", [data: [sendItems: sendItems]])
+		} else {
+			Map data = [:]
+			data?.sendItems = sendItems
+			sendDataToHomebridge(data)
 		}
+	}
+}
+
+private sendDataToHomebridge(data) {
+	List sendItems = data?.sendItems ?: []
+	sendItems?.each { send->
+		if(settings?.showLogs) { 
+			log.debug "Sending${" ${send?.evtSource}" ?: ""} Event (${send?.evtDeviceName} | ${send?.evtAttr.toUpperCase()}: ${send?.evtValue}${send?.evtUnit}) to Homebridge at (${state?.directIP}:${state?.directPort})" 
+		}
+		
+		def result = new physicalgraph.device.HubAction(
+			method: "POST",
+			path: "/update",
+			headers: [
+				HOST: "${state?.directIP}:${state?.directPort}",
+				'Content-Type': 'application/json'
+			],
+			body: [
+				change_name: send?.evtDeviceName,
+				change_device: send?.evtDeviceId,
+				change_attribute: send?.evtAttr,
+				change_value: send?.evtValue,
+				change_date: send?.evtDate
+			]
+		)
+		sendHubCommand(result)
 	}
 }
 
@@ -671,46 +679,12 @@ def enableDirectUpdates() {
 	state?.directIP = params.ip
 	state?.directPort = params.port
 	log.debug("Trying ${state?.directIP}:${state?.directPort}")
-	def result = new physicalgraph.device.HubAction(
-			method: "GET",
-			path: "/initial",
-			headers: [
-				HOST: "${state?.directIP}:${state?.directPort}"
-			],
-			query: deviceData
-		)
-	 sendHubCommand(result)
+	def result = new physicalgraph.device.HubAction(method: "GET", path: "/initial", headers: [HOST: "${state?.directIP}:${state?.directPort}"], query: deviceData)
+	sendHubCommand(result)
 }
 
-def lanEventHandler(evt) {
-    def description = evt.description
-    def hub = evt?.hubId
-    def msg = parseLanMessage(evt.description)
-	//def parsedEvent = parseLanMessage(description)
-    def body = msg.body
-    def headerMap = msg.headers      // => headers as a Map    
-    
-    //Filter out calls from other LAN devices
-    if (headerMap != null){
-    	if (headerMap?.source != "STHomebridge"){
-        	log.debug "Non-Homebridge data detected - ignoring."
-        	return 0
-        }
-    }
-    
-    def result
-    if (body != null){    
-    	try{
-            //log.debug body
-            def slurper = new groovy.json.JsonSlurper()
-            result = slurper.parseText(body)
-            log.debug result
-        }
-        catch (ex){
-        	log.debug "FYI - got a lanmessage response, but it's apparently not JSON. Error: " + ex + ". Body: " + body
-            return 1
-        }
-    }
+def HubResponseEvent(evt) {
+	// log.debug(evt.description)
 }
 
 def locationHandler(evt) {
@@ -727,7 +701,7 @@ def locationHandler(evt) {
 mappings {
 	if (!params.access_token || (params.access_token && params.access_token != state?.accessToken)) {
 		path("/devices")					{ action: [GET: "authError"] }
-		path("/config")						 { action: [GET: "authError"] }
+		path("/config")						{ action: [GET: "authError"] }
 		path("/location")					{ action: [GET: "authError"] }
 		path("/:id/command/:command")		{ action: [POST: "authError"] }
 		path("/:id/query")					{ action: [GET: "authError"] }
@@ -737,12 +711,12 @@ mappings {
 
 	} else {
 		path("/devices")					{ action: [GET: "getAllData"] }
-		path("/config")						 { action: [GET: "renderConfig"]  }
+		path("/config")						{ action: [GET: "renderConfig"]  }
 		path("/location")					{ action: [GET: "renderLocation"] }
 		path("/:id/command/:command")		{ action: [POST: "deviceCommand"] }
 		path("/:id/query")					{ action: [GET: "deviceQuery"] }
 		path("/:id/attribute/:attribute")	{ action: [GET: "deviceAttribute"] }
-		// path("/getUpdates")				{ action: [GET: "getChangeEvents"] }
+		path("/getUpdates")					{ action: [GET: "getChangeEvents"] }
 		path("/startDirect/:ip/:port")		{ action: [GET: "enableDirectUpdates"] }
 	}
 }
