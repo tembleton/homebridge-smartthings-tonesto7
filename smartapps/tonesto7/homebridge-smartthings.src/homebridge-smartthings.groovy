@@ -7,7 +7,7 @@
 
 String appVersion() { return "1.2.0" }
 String appModified() { return "10-05-2018" }
-String appIconUrl() { return "https://raw.githubusercontent.com/pdlove/homebridge-smartthings/master/smartapps/JSON%401.png" }
+String appIconUrl() { return "https://raw.githubusercontent.com/pdlove/homebridge-smartthings/master/smartapps/hb_tonesto7.png" }
 String getAppImg(imgName) { return "https://raw.githubusercontent.com/tonesto7/smartthings-tonesto7-public/master/resources/icons/$imgName" }
 definition(
     name: "Homebridge (SmartThings)",
