@@ -1,13 +1,12 @@
 /**
- *  Homebridge API
- *  Modelled off of Paul Lovelace's JSON API
+ *  Homebridge SmartThing Interface
+ *  Loosely Modelled off of Paul Lovelace's JSON API
  *  Copyright 2018 Anthony Santilli
- *
  */
 
-String appVersion() { return "1.2.0" }
+String appVersion() { return "1.2.1" }
 String appModified() { return "10-05-2018" }
-String appIconUrl() { return "https://raw.githubusercontent.com/pdlove/homebridge-smartthings/master/smartapps/hb_tonesto7.png" }
+String appIconUrl() { return "https://raw.githubusercontent.com/tonesto7/homebridge-smartthings-tonesto7/master/images/hb_tonesto7@2x.png" }
 String getAppImg(imgName) { return "https://raw.githubusercontent.com/tonesto7/smartthings-tonesto7-public/master/resources/icons/$imgName" }
 definition(
     name: "Homebridge (SmartThings)",
@@ -15,9 +14,9 @@ definition(
     author: "Anthony Santilli",
     description: "Provides API interface between Homebridge (HomeKit) Service and SmartThings",
     category: "My Apps",
-    iconUrl:   appIconUrl(),
-    iconX2Url: appIconUrl(),
-    iconX3Url: appIconUrl(),
+    iconUrl:   "https://raw.githubusercontent.com/tonesto7/homebridge-smartthings-tonesto7/master/images/hb_tonesto7@1x.png",
+    iconX2Url: "https://raw.githubusercontent.com/tonesto7/homebridge-smartthings-tonesto7/master/images/hb_tonesto7@2x.png",
+    iconX3Url: "https://raw.githubusercontent.com/tonesto7/homebridge-smartthings-tonesto7/master/images/hb_tonesto7@3x.png",
     oauth: true)
 
 preferences {
@@ -31,10 +30,10 @@ def mainPage() {
     dynamicPage(name: "mainPage", title: "Homebridge Device Configuration", install: true, uninstall:true) {
         section() {
             paragraph "${app?.name}\nv${appVersion()}", image: appIconUrl()
-            paragraph title: "NOTICE", "Any Device Changes will require a restart of the Homebridge Service", required: true, state: null, image: getAppImg("error.png")
+            paragraph "Any Device Changes will require a restart of the Homebridge Service", required: true, state: null, image: getAppImg("error.png")
         }
         section("Define Specific Categories:") {
-            paragraph "These Categories will define the necessary capabilities to make sure they are recognized by HomeKit as the desired device type", state: "complete"
+            paragraph "Each category below will adjust the device attributes to make sure they are recognized as the desired device type under HomeKit", state: "complete"
             input "lightList", "capability.switch", title: "Lights: (${lightList ? lightList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false, image: getAppImg("light_on.png")
             input "fanList", "capability.switch", title: "Fans: (${fanList ? fanList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false, image: getAppImg("fan_on.png")
             input "speakerList", "capability.switch", title: "Speakers: (${speakerList ? speakerList?.size() : 0} Selected)", multiple: true, submitOnChange: true, required: false, image: getAppImg("media_player.png")

@@ -4,7 +4,7 @@ This is based off of @pdlove homebridge-smartthings
 
 [![npm version](https://badge.fury.io/js/homebridge-smartthings-tonesto7.svg)](https://badge.fury.io/js/homebridge-smartthings-tonesto7)
 
-**```Current SmartApp version: 1.1.6```**
+**```Current SmartApp version: 1.2.1```**
 
 <br>
 
@@ -24,6 +24,12 @@ This is based off of @pdlove homebridge-smartthings
 
 ***v1.1.6*** - Command Tweaks to prevent errors.
 
+***v1.1.8*** - Fixes for Mode Devices, added Routine Devices.
+
+***v1.2.0*** - Added ability to selectively remove temp from Contact/Water Sensors, and lot's of Code Cleanup.
+
+***v1.2.0*** - Update SmartApp to support new icon.
+
 #### Homebridge Plugin:
 
 ***v1.1.5*** - Lot's of new capabilities supported in HomeKit
@@ -35,6 +41,8 @@ This is based off of @pdlove homebridge-smartthings
 ***v1.1.9*** - Forgot to remove some logging
 
 ***v1.2.0*** - Added in capability exclusion feature to match @pdlove plugin
+
+***v1.2.3*** - Minor Cleanups
 
 
 <br>
