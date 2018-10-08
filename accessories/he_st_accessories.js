@@ -1,13 +1,12 @@
 var inherits = require('util').inherits;
 var Accessory, Service, Characteristic, uuid, CommunityTypes;
 var routineState = false;
-var platformName = undefined;
+const platformName = 'SmartThings';
 /*
  *   HE_ST Accessory
  */
 
-module.exports = function(oAccessory, oService, oCharacteristic, ouuid, platName) {
-    if (platName) { platformName = platName; };
+module.exports = function(oAccessory, oService, oCharacteristic, ouuid) {
     if (oAccessory) {
         Accessory = oAccessory;
         Service = oService;
