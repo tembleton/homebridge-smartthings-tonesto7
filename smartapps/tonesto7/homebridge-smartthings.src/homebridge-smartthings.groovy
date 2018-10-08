@@ -267,8 +267,8 @@ def getDeviceData(type, sItem) {
             basename:  !isVirtual ? sItem?.name : name,
             deviceid: !isVirtual ? sItem?.id : devId,
             status: !isVirtual ? sItem?.status : "Online",
-            manufacturerName: !isVirtual ? sItem?.getDataValue("manufacturer") : platform(),
-            modelName: !isVirtual ? (sItem?.getDataValue("model") ?: sItem?.getTypeName()) : "${curType} Device",
+            manufacturerName: !isVirtual ? (isST() ? sItem?.getManufacturerName() : sItem?.getDataValue("manufacturer")) : platform(),
+            modelName: !isVirtual ? ((isST() ? sItem?.getModelName() : sItem?.getDataValue("model")) ?: sItem?.getTypeName()) : "${curType} Device",
             serialNumber: !isVirtual ? sItem?.getDeviceNetworkId() : "${curType}${devId}",
             firmwareVersion: "1.0.0",
             lastTime: !isVirtual ? (isST() ? sItem?.getLastActivity() : null) : now(),
@@ -277,6 +277,7 @@ def getDeviceData(type, sItem) {
             attributes: !isVirtual ? deviceAttributeList(sItem) : ["switch": attrVal]
         ]
     } else { return null }
+    
 }
 
 String modeSwitchState(String mode) {
@@ -395,7 +396,7 @@ def renderLocation() {
         name: location?.name,
         temperature_scale: location?.temperatureScale,
         zip_code: location?.zipCode,
-        hubIP: (isST() ? location.hubs[0]?.getDataValue("localIP") : location?.hubs[0]?.localIP),
+        hubIP: (isST() ? location?.hubs[0]?.localIP : location.hubs[0]?.getDataValue("localIP")),
         app_version: appVersion()
     ]
 }
