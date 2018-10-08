@@ -1,9 +1,9 @@
 var inherits = require('util').inherits;
 var Accessory, Service, Characteristic, uuid, CommunityTypes;
 var routineState = false;
-
+const platformName = 'SmartThings';
 /*
- *   SmartThings Accessory
+ *   HE_ST Accessory
  */
 
 module.exports = function(oAccessory, oService, oCharacteristic, ouuid) {
@@ -14,27 +14,27 @@ module.exports = function(oAccessory, oService, oCharacteristic, ouuid) {
         CommunityTypes = require('../lib/communityTypes')(Service, Characteristic);
         uuid = ouuid;
 
-        inherits(SmartThingsAccessory, Accessory);
-        SmartThingsAccessory.prototype.loadData = loadData;
-        SmartThingsAccessory.prototype.getServices = getServices;
+        inherits(HE_ST_Accessory, Accessory);
+        HE_ST_Accessory.prototype.loadData = loadData;
+        HE_ST_Accessory.prototype.getServices = getServices;
     }
-    return SmartThingsAccessory;
+    return HE_ST_Accessory;
 };
-module.exports.SmartThingsAccessory = SmartThingsAccessory;
+module.exports.HE_ST_Accessory = HE_ST_Accessory;
 
 function toTitleCase(str) {
     return str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 }
 
 
-function SmartThingsAccessory(platform, device) {
+function HE_ST_Accessory(platform, device) {
     // console.log("SmartThingsAccessory: ", platform, device);
     this.deviceid = device.deviceid;
     this.name = device.name;
     this.platform = platform;
     this.state = {};
     this.device = device;
-    var idKey = 'hbdev:smartthings:' + this.deviceid;
+    var idKey = 'hbdev:' + platformName.toLowerCase() + ':' + this.deviceid;
     var id = uuid.generate(idKey);
     Accessory.call(this, this.name, id);
     var that = this;
@@ -76,7 +76,7 @@ function SmartThingsAccessory(platform, device) {
     let isLight = (device.capabilities['LightBulb'] !== undefined || device.capabilities['Bulb'] !== undefined || that.device.capabilities['Fan Light'] !== undefined || device.name.includes('light'));
     let isSpeaker = (device.capabilities['Speaker'] !== undefined);
     if (device && device.capabilities) {
-        if (device.capabilities['Switch Level'] !== undefined && !isSpeaker && !isFan && !isMode && !isRoutine) {
+        if (device.capabilities['Switch Level'] || device.capabilities['SwitchLevel'] && !isSpeaker && !isFan && !isMode && !isRoutine) {
             if (device.commands.levelOpenClose || device.commands.presetPosition) {
                 // This is a Window Shade
                 that.deviceGroup = 'shades';
@@ -119,7 +119,7 @@ function SmartThingsAccessory(platform, device) {
                     });
                 });
                 that.platform.addAttributeUsage('level', that.deviceid, thisCharacteristic);
-                if (device.capabilities['Color Control'] !== undefined) {
+                if (device.capabilities['Color Control'] !== undefined || device.capabilities['ColorControl']) {
                     thisCharacteristic = that.getaddService(Service.Lightbulb).getCharacteristic(Characteristic.Hue);
                     thisCharacteristic.on('get', function(callback) {
                         callback(null, Math.round(that.device.attributes.hue * 3.6));
@@ -143,7 +143,53 @@ function SmartThingsAccessory(platform, device) {
                 }
             }
         }
-        if (device.capabilities['Garage Door Control'] !== undefined) {
+        if (device.capabilities['WindowShade']) {
+            that.deviceGroup = 'shades';
+            thisCharacteristic = that.getaddService(Service.WindowCovering).getCharacteristic(Characteristic.TargetPosition);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, parseInt(that.device.attributes.position));
+            });
+            thisCharacteristic.on('set', function(value, callback) {
+                if (value > 99) {
+                    value = 99;
+                } else if (value < 0) {
+                    value = 0;
+                }
+                that.platform.log('setPosition: ' + value);
+                that.platform.api.runCommand(callback, that.deviceid, 'setPosition', {
+                    value1: value
+                });
+            });
+            that.platform.addAttributeUsage('position', that.deviceid, thisCharacteristic);
+
+            thisCharacteristic = that.getaddService(Service.WindowCovering).getCharacteristic(Characteristic.CurrentPosition);
+            thisCharacteristic.on('get', function(callback) {
+                callback(null, parseInt(that.device.attributes.position));
+            });
+            that.platform.addAttributeUsage('position', that.deviceid, thisCharacteristic);
+
+            if (device.attributes.windowShade) {
+                thisCharacteristic = that.getaddService(Service.WindowCovering).getCharacteristic(Characteristic.PositionState);
+                var posState = device.attributes.windowShade;
+                switch (posState) {
+                    case "closing":
+                        posState = 1;
+                        break;
+                    case "opening":
+                        posState = 0;
+                        break;
+                    default:
+                        posState = 2;
+                        break;
+                }
+                thisCharacteristic.on('get', function(callback) {
+                    callback(null, posState);
+                });
+                that.platform.addAttributeUsage('positionState', that.deviceid, thisCharacteristic);
+            }
+
+        }
+        if (device.capabilities['Garage Door Control'] !== undefined || device.capabilities['GarageDoorControl']) {
             that.deviceGroup = 'garage_doors';
             thisCharacteristic = that.getaddService(Service.GarageDoorOpener).getCharacteristic(Characteristic.TargetDoorState);
             thisCharacteristic.on('get', function(callback) {
@@ -236,7 +282,7 @@ function SmartThingsAccessory(platform, device) {
             });
             that.platform.addAttributeUsage('lock', that.deviceid, thisCharacteristic);
         }
-        if (device.capabilities["Valve"] !== undefined) { //Currently only works with SmartThings Rachio Devices
+        if (device.capabilities["Valve"] !== undefined) {
             this.platform.log("valve: " + that.device.attributes.valve);
             that.deviceGroup = "valve";
             let valveType = (device.capabilities['Irrigation'] !== undefined ? 0 : 0);
@@ -255,8 +301,6 @@ function SmartThingsAccessory(platform, device) {
             that.platform.addAttributeUsage('valveType', that.deviceid, thisCharacteristic);
 
             //Defines Valve State (opened/closed)
-
-
             thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.Active);
             thisCharacteristic.on('get', function(callback) {
                 callback(null, that.device.attributes.valve === 'open' ? Characteristic.InUse.IN_USE : Characteristic.InUse.NOT_IN_USE);
@@ -271,46 +315,6 @@ function SmartThingsAccessory(platform, device) {
                 // }
             });
             that.platform.addAttributeUsage('active', that.deviceid, thisCharacteristic);
-
-            //Defines the IsConfigured Characteristic
-            // thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.IsConfigured);
-            // thisCharacteristic.on('get', function(callback) {
-            //     callback(null, 1);
-            // });
-            // that.platform.addAttributeUsage('IsConfigured', that.deviceid, thisCharacteristic);
-
-            // //Manages the zoneDuration Characteristic (Shows Duration in Home App) Needs Work
-            // let zoneDurVal = that.device.attributes.zoneDuration ? parseInt(that.device.attributes.zoneDuration) : 0;
-            // let zoneElapVal = that.device.attributes.zoneElapsed ? parseInt(that.device.attributes.zoneElapsed) : 0;
-            // thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.RemainingDuration);
-            // thisCharacteristic.on('get', function(callback) {
-            //     let zoneDur = zoneDurVal - zoneElapVal;
-            //     if (zoneDur > 3600) {
-            //         zoneDur = 3600;
-            //     } else if (zoneDur < 0) { zoneDur = 0; }
-            //     callback(null, parseInt(zoneDur));
-            // });
-            // that.platform.addAttributeUsage('remainingDuration', that.deviceid, thisCharacteristic);
-
-            //Manages the zoneDuration Characteristic
-            // thisCharacteristic = that.getaddService(Service.Valve).getCharacteristic(Characteristic.SetDuration);
-            // thisCharacteristic.on('get', function(callback) {
-            //     let zoneDur = device.attributes.zoneWaterTime || 0;
-            //     if (zoneDur > 3600) {
-            //         zoneDur = 3600;
-            //     }
-            //     callback(null, parseInt(zoneDur));
-            // });
-            // thisCharacteristic.on('set', function(value, callback) {
-            //     let zoneDur = value || 0;
-            //     if (zoneDur > 3600) {
-            //         zoneDur = 3600;
-            //     }
-            //     that.platform.api.runCommand(callback, that.deviceid, 'setZoneWaterTime', {
-            //         value1: parseInt(zoneDur / 60)
-            //     });
-            // });
-            // that.platform.addAttributeUsage('zoneDuration', that.deviceid, thisCharacteristic);
         }
 
         //Defines Speaker Device
@@ -342,7 +346,7 @@ function SmartThingsAccessory(platform, device) {
             that.platform.addAttributeUsage('mute', that.deviceid, thisCharacteristic);
         }
         //Handles Standalone Fan with no levels
-        if (isFan === true && (that.device.capabilities['Fan Light'] !== undefined || that.deviceGroup === 'unknown')) {
+        if (isFan === true && (that.device.capabilities['Fan Light'] !== undefined || that.device.capabilities['FanLight'] || that.deviceGroup === 'unknown')) {
             that.deviceGroup = 'fans';
             thisCharacteristic = that.getaddService(Service.Fanv2).getCharacteristic(Characteristic.Active);
             thisCharacteristic.on('get', function(callback) {
@@ -427,7 +431,7 @@ function SmartThingsAccessory(platform, device) {
             });
             that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
         }
-        if (device.capabilities['Switch'] !== undefined && (that.device.capabilities['Fan Light'] !== undefined || that.deviceGroup === 'unknown')) {
+        if (device.capabilities['Switch'] !== undefined && (that.device.capabilities['Fan Light'] !== undefined || that.device.capabilities['Fan Light'] || that.deviceGroup === 'unknown')) {
             //Handles Standalone Fan with no levels
             if (isLight === true) {
                 that.deviceGroup = 'light';
@@ -460,14 +464,14 @@ function SmartThingsAccessory(platform, device) {
                     }
                 });
                 that.platform.addAttributeUsage('switch', that.deviceid, thisCharacteristic);
-                if (that.device.capabilities['Energy Meter'] !== undefined) {
+                if (that.device.capabilities['Energy Meter'] !== undefined || that.device.capabilities['EnergyMeter'] !== undefined) {
                     thisCharacteristic = that.getaddService(Service.Switch).addCharacteristic(CommunityTypes.TotalConsumption1);
                     thisCharacteristic.on('get', function(callback) {
                         callback(null, Math.round(that.device.attributes.power));
                     });
                     that.platform.addAttributeUsage('power', that.deviceid, thisCharacteristic);
                 }
-                if (device.capabilities['Power Meter'] !== undefined) {
+                if (device.capabilities['Power Meter'] !== undefined || device.capabilities['PowerMeter'] !== undefined) {
                     thisCharacteristic = that.getaddService(Service.Switch).addCharacteristic(CommunityTypes.CurrentConsumption1);
                     thisCharacteristic.on('get', function(callback) {
                         callback(null, Math.round(that.device.attributes.power));
@@ -477,7 +481,7 @@ function SmartThingsAccessory(platform, device) {
             }
         }
         // Smoke Detectors
-        if (device.capabilities['Smoke Detector'] !== undefined && that.device.attributes.smoke) {
+        if ((device.capabilities['Smoke Detector'] || device.capabilities['SmokeDetector']) && that.device.attributes.smoke) {
             that.deviceGroup = 'detectors';
             thisCharacteristic = that.getaddService(Service.SmokeSensor).getCharacteristic(Characteristic.SmokeDetected);
             thisCharacteristic.on('get', function(callback) {
@@ -488,7 +492,7 @@ function SmartThingsAccessory(platform, device) {
                 }
             });
             that.platform.addAttributeUsage('smoke', that.deviceid, thisCharacteristic);
-            if (device.capabilities['Tamper Alert'] !== undefined) {
+            if (device.capabilities['Tamper Alert'] || device.capabilities['TamperAlert']) {
                 thisCharacteristic = that.getaddService(Service.SmokeSensor).getCharacteristic(Characteristic.StatusTampered);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, (device.attributes.tamperAlert === 'detected') ? Characteristic.StatusTampered.TAMPERED : Characteristic.StatusTampered.NOT_TAMPERED);
@@ -496,7 +500,7 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('tamper', that.deviceid, thisCharacteristic);
             }
         }
-        if (device.capabilities['Carbon Monoxide Detector'] !== undefined && that.device.attributes.carbonMonoxide) {
+        if ((device.capabilities['Carbon Monoxide Detector'] || device.capabilities['CarbonMonoxideDetector']) && that.device.attributes.carbonMonoxide) {
             that.deviceGroup = 'detectors';
             thisCharacteristic = that.getaddService(Service.CarbonMonoxideSensor).getCharacteristic(Characteristic.CarbonMonoxideDetected);
             thisCharacteristic.on('get', function(callback) {
@@ -507,7 +511,7 @@ function SmartThingsAccessory(platform, device) {
                 }
             });
             that.platform.addAttributeUsage('carbonMonoxide', that.deviceid, thisCharacteristic);
-            if (device.capabilities['Tamper Alert'] !== undefined) {
+            if (device.capabilities['Tamper Alert'] || device.capabilities['TamperAlert']) {
                 thisCharacteristic = that.getaddService(Service.CarbonMonoxideSensor).getCharacteristic(Characteristic.StatusTampered);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, (device.attributes.tamperAlert === 'detected') ? Characteristic.StatusTampered.TAMPERED : Characteristic.StatusTampered.NOT_TAMPERED);
@@ -515,7 +519,7 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('tamper', that.deviceid, thisCharacteristic);
             }
         }
-        if (device.capabilities['Carbon Dioxide Measurement'] !== undefined && that.device.attributes.carbonDioxideMeasurement) {
+        if ((device.capabilities['Carbon Dioxide Measurement'] || device.capabilities['CarbonDioxideMeasurement']) && that.device.attributes.carbonDioxideMeasurement) {
             that.deviceGroup = 'carbonDioxide';
             thisCharacteristic = that.getaddService(Service.CarbonDioxideSensor).getCharacteristic(Characteristic.CarbonDioxideDetected);
             thisCharacteristic.on('get', function(callback) {
@@ -533,7 +537,7 @@ function SmartThingsAccessory(platform, device) {
                 }
             });
             that.platform.addAttributeUsage('carbonDioxideLevel', that.deviceid, thisCharacteristic);
-            if (device.capabilities['Tamper Alert'] !== undefined) {
+            if (device.capabilities['Tamper Alert'] || device.capabilities['TamperAlert']) {
                 thisCharacteristic = that.getaddService(Service.CarbonDioxideSensor).getCharacteristic(Characteristic.StatusTampered);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, (device.attributes.tamperAlert === 'detected') ? Characteristic.StatusTampered.TAMPERED : Characteristic.StatusTampered.NOT_TAMPERED);
@@ -541,7 +545,7 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('tamper', that.deviceid, thisCharacteristic);
             }
         }
-        if (device.capabilities['Motion Sensor'] !== undefined) {
+        if (device.capabilities['Motion Sensor'] !== undefined || device.capabilities['MotionSensor']) {
             if (that.deviceGroup === 'unknown') {
                 that.deviceGroup = 'sensor';
             }
@@ -550,7 +554,7 @@ function SmartThingsAccessory(platform, device) {
                 callback(null, that.device.attributes.motion === 'active');
             });
             that.platform.addAttributeUsage('motion', that.deviceid, thisCharacteristic);
-            if (device.capabilities['Tamper Alert'] !== undefined) {
+            if (device.capabilities['Tamper Alert'] || device.capabilities['TamperAlert']) {
                 thisCharacteristic = that.getaddService(Service.MotionSensor).getCharacteristic(Characteristic.StatusTampered);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, (device.attributes.tamperAlert === 'detected') ? Characteristic.StatusTampered.TAMPERED : Characteristic.StatusTampered.NOT_TAMPERED);
@@ -558,7 +562,7 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('tamper', that.deviceid, thisCharacteristic);
             }
         }
-        if (device.capabilities['Water Sensor'] !== undefined) {
+        if (device.capabilities['Water Sensor'] !== undefined || device.capabilities['WaterSensor']) {
             if (that.deviceGroup === 'unknown') {
                 that.deviceGroup = 'sensor';
             }
@@ -571,7 +575,7 @@ function SmartThingsAccessory(platform, device) {
                 callback(null, reply);
             });
             that.platform.addAttributeUsage('water', that.deviceid, thisCharacteristic);
-            if (device.capabilities['Tamper Alert'] !== undefined) {
+            if (device.capabilities['Tamper Alert'] || device.capabilities['TamperAlert']) {
                 thisCharacteristic = that.getaddService(Service.LeakSensor).getCharacteristic(Characteristic.StatusTampered);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, (device.attributes.tamperAlert === 'detected') ? Characteristic.StatusTampered.TAMPERED : Characteristic.StatusTampered.NOT_TAMPERED);
@@ -579,7 +583,7 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('tamper', that.deviceid, thisCharacteristic);
             }
         }
-        if (device.capabilities['Presence Sensor'] !== undefined) {
+        if (device.capabilities['Presence Sensor'] !== undefined || device.capabilities['PresenceSensor']) {
             if (that.deviceGroup === 'unknown') {
                 that.deviceGroup = 'sensor';
             }
@@ -588,7 +592,7 @@ function SmartThingsAccessory(platform, device) {
                 callback(null, that.device.attributes.presence === 'present');
             });
             that.platform.addAttributeUsage('presence', that.deviceid, thisCharacteristic);
-            if (device.capabilities['Tamper Alert'] !== undefined) {
+            if (device.capabilities['Tamper Alert'] || device.capabilities['TamperAlert']) {
                 thisCharacteristic = that.getaddService(Service.OccupancySensor).getCharacteristic(Characteristic.StatusTampered);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, (device.attributes.tamperAlert === 'detected') ? Characteristic.StatusTampered.TAMPERED : Characteristic.StatusTampered.NOT_TAMPERED);
@@ -596,7 +600,7 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('tamper', that.deviceid, thisCharacteristic);
             }
         }
-        if (device.capabilities['Relative Humidity Measurement'] !== undefined) {
+        if (device.capabilities['Relative Humidity Measurement'] || device.capabilities['RelativeHumidityMeasurement']) {
             if (that.deviceGroup === 'unknown') {
                 that.deviceGroup = 'sensor';
             }
@@ -605,7 +609,7 @@ function SmartThingsAccessory(platform, device) {
                 callback(null, Math.round(that.device.attributes.humidity));
             });
             that.platform.addAttributeUsage('humidity', that.deviceid, thisCharacteristic);
-            if (device.capabilities['Tamper Alert'] !== undefined) {
+            if (device.capabilities['Tamper Alert'] || device.capabilities['TamperAlert']) {
                 thisCharacteristic = that.getaddService(Service.HumiditySensor).getCharacteristic(Characteristic.StatusTampered);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, (device.attributes.tamperAlert === 'detected') ? Characteristic.StatusTampered.TAMPERED : Characteristic.StatusTampered.NOT_TAMPERED);
@@ -613,7 +617,7 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('tamper', that.deviceid, thisCharacteristic);
             }
         }
-        if (device.capabilities['Temperature Measurement'] !== undefined) {
+        if (device.capabilities['Temperature Measurement'] || device.capabilities['TemperatureMeasurement']) {
             if (that.deviceGroup === 'unknown') {
                 that.deviceGroup = 'sensor';
             }
@@ -634,7 +638,7 @@ function SmartThingsAccessory(platform, device) {
                 that.platform.addAttributeUsage('tamper', that.deviceid, thisCharacteristic);
             }
         }
-        if (device.capabilities['Illuminance Measurement'] !== undefined) {
+        if (device.capabilities['Illuminance Measurement'] || device.capabilities['IlluminanceMeasurement']) {
             // console.log(device);
             if (that.deviceGroup === 'unknown') {
                 that.deviceGroup = 'sensor';
@@ -645,7 +649,7 @@ function SmartThingsAccessory(platform, device) {
             });
             that.platform.addAttributeUsage('illuminance', that.deviceid, thisCharacteristic);
         }
-        if (device.capabilities['Contact Sensor'] !== undefined && device.capabilities['Garage Door Control'] === undefined) {
+        if ((device.capabilities['Contact Sensor'] !== undefined && device.capabilities['Garage Door Control'] === undefined) || (device.capabilities['ContactSensor'] && device.capabilities['GarageDoorControl'] === undefined)) {
             if (that.deviceGroup === 'unknown') {
                 that.deviceGroup = 'sensor';
             }
@@ -658,7 +662,7 @@ function SmartThingsAccessory(platform, device) {
                 }
             });
             that.platform.addAttributeUsage('contact', that.deviceid, thisCharacteristic);
-            if (device.capabilities['Tamper Alert'] !== undefined) {
+            if (device.capabilities['Tamper Alert'] || device.capabilities['TamperAlert']) {
                 thisCharacteristic = that.getaddService(Service.ContactSensor).getCharacteristic(Characteristic.StatusTampered);
                 thisCharacteristic.on('get', function(callback) {
                     callback(null, (device.attributes.tamperAlert === 'detected') ? Characteristic.StatusTampered.TAMPERED : Characteristic.StatusTampered.NOT_TAMPERED);
@@ -695,12 +699,12 @@ function SmartThingsAccessory(platform, device) {
         //     });
         //     that.platform.addAttributeUsage('power', that.deviceid, thisCharacteristic);
         // }
-        if (device.capabilities['Acceleration Sensor'] !== undefined) {
+        if (device.capabilities['Acceleration Sensor'] !== undefined || device.capabilities['AccelerationSensor']) {
             if (that.deviceGroup === 'unknown') {
                 that.deviceGroup = 'sensor';
             }
         }
-        if (device.capabilities['Three Axis'] !== undefined) {
+        if (device.capabilities['Three Axis'] !== undefined || device.capabilities['ThreeAxis']) {
             if (that.deviceGroup === 'unknown') {
                 that.deviceGroup = 'sensor';
             }
@@ -911,17 +915,17 @@ function SmartThingsAccessory(platform, device) {
             });
             that.platform.addAttributeUsage('coolingSetpoint', that.deviceid, thisCharacteristic);
         }
+        // Alarm System Control/Status
         if (device.attributes['alarmSystemStatus'] !== undefined) {
             that.deviceGroup = 'alarm';
             thisCharacteristic = that.getaddService(Service.SecuritySystem).getCharacteristic(Characteristic.SecuritySystemCurrentState);
             thisCharacteristic.on('get', function(callback) {
-                // that.platform.log(that.deviceid + ' check 1: ' + that.device.attributes.alarmSystemStatus);
                 callback(null, convertAlarmState(that.device.attributes.alarmSystemStatus.toLowerCase(), true));
             });
             that.platform.addAttributeUsage('alarmSystemStatus', that.deviceid, thisCharacteristic);
+
             thisCharacteristic = that.getaddService(Service.SecuritySystem).getCharacteristic(Characteristic.SecuritySystemTargetState);
             thisCharacteristic.on('get', function(callback) {
-                // that.platform.log(that.deviceid + ' check 2: ' + that.device.attributes.alarmSystemStatus);
                 callback(null, convertAlarmState(that.device.attributes.alarmSystemStatus.toLowerCase(), true));
             });
             thisCharacteristic.on('set', function(value, callback) {
@@ -931,37 +935,6 @@ function SmartThingsAccessory(platform, device) {
                 that.device.attributes.alarmSystemStatus = val;
             });
             that.platform.addAttributeUsage('alarmSystemStatus', that.deviceid, thisCharacteristic);
-        }
-        if (device.capabilities['Air Quality Sensor'] !== undefined) {
-            that.deviceGroup = 'airquality';
-            thisCharacteristic = that.getaddService(Service.AirQualitySensor).getCharacteristic(Characteristic.AirQuality);
-            thisCharacteristic.on('get', function(callback) {
-                // Characteristic.AirQuality.UNKNOWN = 0;
-                // Characteristic.AirQuality.EXCELLENT = 1;
-                // Characteristic.AirQuality.GOOD = 2;
-                // Characteristic.AirQuality.FAIR = 3;
-                // Characteristic.AirQuality.INFERIOR = 4;
-                // Characteristic.AirQuality.POOR = 5;
-                callback(null, convertAlarmState(that.device.attributes.alarmSystemStatus.toLowerCase(), true));
-            });
-            that.platform.addAttributeUsage('airQuality', that.deviceid, thisCharacteristic);
-            thisCharacteristic = that.getaddService(Service.AirQualitySensor).getCharacteristic(Characteristic.TargetAirQuality);
-            thisCharacteristic.on('get', function(callback) {
-                // Characteristic.AirQuality.UNKNOWN = 0;
-                // Characteristic.AirQuality.EXCELLENT = 1;
-                // Characteristic.AirQuality.GOOD = 2;
-                // Characteristic.AirQuality.FAIR = 3;
-                // Characteristic.AirQuality.INFERIOR = 4;
-                // Characteristic.AirQuality.POOR = 5;
-                callback(null, convertAlarmState(that.device.attributes.alarmSystemStatus.toLowerCase(), true));
-            });
-            thisCharacteristic.on('set', function(value, callback) {
-                // Characteristic.TargetAirQuality.EXCELLENT = 0;
-                // Characteristic.TargetAirQuality.GOOD = 1;
-                // Characteristic.TargetAirQuality.FAIR = 2;
-                // that.platform.api.runCommand(callback, 'alarmSystemStatus', val);
-            });
-            that.platform.addAttributeUsage('airQuality', that.deviceid, thisCharacteristic);
         }
     }
     this.loadData(device, that);

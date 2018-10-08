@@ -1,23 +1,22 @@
-var smartthings = require('./lib/smartthingsapi');
+var he_st_api = require('./lib/he_st_api');
 var http = require('http');
 var os = require('os');
-
+const pluginName = 'homebridge-smartthing';
+const platformName = 'SmartThings';
 var Service, Characteristic, Accessory, uuid;
 
-var SmartThingsAccessory;
+var HE_ST_Accessory;
 
 module.exports = function(homebridge) {
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
     Accessory = homebridge.hap.Accessory;
     uuid = homebridge.hap.uuid;
-
-    SmartThingsAccessory = require('./accessories/smartthings')(Accessory, Service, Characteristic, uuid);
-
-    homebridge.registerPlatform('homebridge-smartthings', 'SmartThings', SmartThingsPlatform);
+    HE_ST_Accessory = require('./accessories/he_st_accessories')(Accessory, Service, Characteristic, uuid);
+    homebridge.registerPlatform(pluginName, platformName, HE_ST_Platform);
 };
 
-function SmartThingsPlatform(log, config) {
+function HE_ST_Platform(log, config) {
     // Load Wink Authentication From Config File
     this.app_url = config['app_url'];
     this.app_id = config['app_id'];
@@ -44,11 +43,11 @@ function SmartThingsPlatform(log, config) {
         this.update_seconds = 30;
     }
     if (this.update_method === 'api' && this.update_seconds < 30) {
-        this.log('The setting for update_seconds is lower than the SmartThings recommended value. Please switch to direct or PubNub using a free subscription for real-time updates.');
+        this.log('The setting for update_seconds is lower than the ' + platformName + ' recommended value. Please switch to direct or PubNub using a free subscription for real-time updates.');
     }
     this.direct_port = config['direct_port'];
     if (this.direct_port === undefined || this.direct_port === '') {
-        this.direct_port = 8000;
+        this.direct_port = (platformName === 'Hubitat' ? 8000 : 8005);
     }
 
     this.direct_ip = config['direct_ip'];
@@ -56,20 +55,20 @@ function SmartThingsPlatform(log, config) {
         this.direct_ip = getIPAddress();
     }
     this.config = config;
-    this.api = smartthings;
+    this.api = he_st_api;
     this.log = log;
     this.deviceLookup = {};
     this.firstpoll = true;
     this.attributeLookup = {};
 }
 
-SmartThingsPlatform.prototype = {
+HE_ST_Platform.prototype = {
     reloadData: function(callback) {
         var that = this;
         that.log('config: ', JSON.stringify(this.config));
         var foundAccessories = [];
         that.log.debug('Refreshing All Device Data');
-        smartthings.getDevices(function(myList) {
+        he_st_api.getDevices(function(myList) {
             that.log.debug('Received All Device Data');
             // success
             if (myList && myList.deviceList && myList.deviceList instanceof Array) {
@@ -82,7 +81,7 @@ SmartThingsPlatform.prototype = {
                             accessory = that.deviceLookup[device.deviceid];
                             accessory.loadData(devices[i]);
                         } else {
-                            accessory = new SmartThingsAccessory(that, device);
+                            accessory = new HE_ST_Accessory(that, device);
                             // that.log(accessory);
                             if (accessory !== undefined) {
                                 if (accessory.services.length <= 1 || accessory.deviceGroup === 'unknown') {
@@ -115,7 +114,7 @@ SmartThingsPlatform.prototype = {
         });
     },
     accessories: function(callback) {
-        this.log('Fetching SmartThings devices.');
+        this.log('Fetching ' + platformName + ' devices.');
 
         // IMPORTANT Links:
         // https://developer.apple.com/documentation/homekit/hmaccessory
@@ -133,6 +132,7 @@ SmartThingsPlatform.prototype = {
             'LightBulb',
             'Bulb',
             'Color Control',
+            // 'ColorControl',
             'Door',
             'Window',
             'Battery',
@@ -140,65 +140,84 @@ SmartThingsPlatform.prototype = {
             'Lock',
             'Refresh',
             'Lock Codes',
+            // 'LockCodes',
             'Sensor',
             'Actuator',
             'Configuration',
             'Switch Level',
+            // 'SwitchLevel',
             'Temperature Measurement',
+            // 'TemperatureMeasurement',
             'Motion Sensor',
+            // 'MotionSensor',
             'Color Temperature',
+            // 'ColorTemperature',
             'Illuminance Measurement',
+            // 'IlluminanceMeasurement',
             'Contact Sensor',
-            // 'Three Axis',
+            // 'ContactSensor',
             'Acceleration Sensor',
-            // 'Air Quality Sensor',
-            'Momentary',
+            // 'AccelerationSensor',
             'Door Control',
+            // 'DoorControl',
             'Garage Door Control',
-            'Tamper Alert',
+            // 'GarageDoorControl',
             'Relative Humidity Measurement',
+            // 'RelativeHumidityMeasurement',
             'Presence Sensor',
+            // 'PresenceSensor',
             'Carbon Dioxide Measurement',
+            // 'CarbonDioxideMeasurement',
             'Carbon Monoxide Detector',
+            // 'CarbonMonoxideDetector',
+            // 'WaterSensor',
             'Water Sensor',
             'Window Shade',
+            // 'WindowShade',
             'Valve',
-            'Irrigation',
             'Energy Meter',
+            // 'EnergyMeter',
             'Power Meter',
-            // 'Power Source',
+            // 'PowerMeter',
             'Thermostat',
             'Thermostat Cooling Setpoint',
+            // 'ThermostatCoolingSetpoint',
             'Thermostat Mode',
+            // 'ThermostatMode',
             'Thermostat Fan Mode',
+            // 'ThermostatFanMode',
             'Thermostat Operating State',
+            // 'ThermostatOperatingState',
             'Thermostat Heating Setpoint',
+            // 'ThermostatHeatingSetpoint',
             'Thermostat Setpoint',
+            // 'ThermostatSetpoint',
             'Fan Speed',
             'Fan Control',
             'Fan Light',
+            // 'FanSpeed',
+            // 'FanControl',
+            // 'FanLight',
             'Fan',
-            'Indicator',
-            // 'Video Stream',
-            // 'Music Player',
             'Speaker',
-            'Audio Mute',
-            'Audio Notification',
-            'Audio Volume',
-            'Media Playback',
-            'Media Playback Repeat',
-            'Media Playback Shuffle',
-            'Media Track Control',
+            'Tamper Alert',
             'Alarm',
             'Alarm System Status',
-            'Timed Session',
+            'AlarmSystemStatus',
             'Mode',
             'Routine',
             'Button'
         ];
+        if (platformName === 'Hubitat' || platformName === 'hubitat') {
+            let newList = [];
+            for (const item in this.knownCapabilities) {
+                newList.push(this.knownCapabilities[item].replace(/ /g, ''));
+            }
+            this.knownCapabilities = newList;
+        }
         this.temperature_unit = 'F';
 
-        smartthings.init(this.app_url, this.app_id, this.access_token, this.hub_ip);
+        he_st_api.init(this.app_url, this.app_id, this.access_token, this.hub_ip);
         that.log('update_method: ' + that.update_method);
         this.reloadData(function(foundAccessories) {
             that.log('Unknown Capabilities: ' + JSON.stringify(that.unknownCapabilities));
@@ -209,8 +228,8 @@ SmartThingsPlatform.prototype = {
                 setInterval(that.doIncrementalUpdate.bind(that), that.update_seconds * 1000);
             } else if (that.update_method === 'direct') {
                 // The Hub sends updates to this module using http
-                smartthings_SetupHTTPServer(that);
-                smartthings.startDirect(null, that.direct_ip, that.direct_port);
+                he_st_api_SetupHTTPServer(that);
+                he_st_api.startDirect(null, that.direct_ip, that.direct_port);
             }
         });
     },
@@ -226,7 +245,7 @@ SmartThingsPlatform.prototype = {
 
     doIncrementalUpdate: function() {
         var that = this;
-        smartthings.getUpdates(function(data) {
+        he_st_api.getUpdates(function(data) {
             that.processIncrementalUpdate(data, that);
         });
     },
@@ -273,26 +292,26 @@ function getIPAddress() {
     return '0.0.0.0';
 }
 
-function smartthings_SetupHTTPServer(mySmartThings) {
+function he_st_api_SetupHTTPServer(myHe_st_api) {
     // Get the IP address that we will send to the SmartApp. This can be overridden in the config file.
-    let ip = mySmartThings.direct_ip || getIPAddress();
+    let ip = myHe_st_api.direct_ip || getIPAddress();
     // Start the HTTP Server
     const server = http.createServer(function(request, response) {
-        smartthings_HandleHTTPResponse(request, response, mySmartThings);
+        he_st_api_HandleHTTPResponse(request, response, myHe_st_api);
     });
 
-    server.listen(mySmartThings.direct_port, err => {
+    server.listen(myHe_st_api.direct_port, err => {
         if (err) {
-            mySmartThings.log('something bad happened', err);
+            myHe_st_api.log('something bad happened', err);
             return '';
         }
-        mySmartThings.log(`Direct Connect Is Listening On ${ip}:${mySmartThings.direct_port}`);
+        myHe_st_api.log(`Direct Connect Is Listening On ${ip}:${myHe_st_api.direct_port}`);
     });
     return 'good';
 }
 
-function smartthings_HandleHTTPResponse(request, response, mySmartThings) {
-    if (request.url === '/initial') mySmartThings.log('SmartThings Hub Communication Established');
+function he_st_api_HandleHTTPResponse(request, response, myHe_st_api) {
+    if (request.url === '/initial') myHe_st_api.log(platformName + ' Hub Communication Established');
     if (request.url === '/update') {
         let body = [];
         request.on('data', (chunk) => {
@@ -307,8 +326,8 @@ function smartthings_HandleHTTPResponse(request, response, mySmartThings) {
                     value: data.change_value,
                     date: data.change_date
                 };
-                mySmartThings.log('Change Event:', '(' + data.change_name + ') [' + (data.change_attribute ? data.change_attribute.toUpperCase() : 'unknown') + '] is ' + data.change_value);
-                mySmartThings.processFieldUpdate(newChange, mySmartThings);
+                myHe_st_api.log('Change Event:', '(' + data.change_name + ') [' + (data.change_attribute ? data.change_attribute.toUpperCase() : 'unknown') + '] is ' + data.change_value);
+                myHe_st_api.processFieldUpdate(newChange, myHe_st_api);
             }
         });
     }

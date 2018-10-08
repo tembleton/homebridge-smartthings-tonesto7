@@ -4,7 +4,7 @@ This is based off of @pdlove homebridge-smartthings
 
 [![npm version](https://badge.fury.io/js/homebridge-smartthings-tonesto7.svg)](https://badge.fury.io/js/homebridge-smartthings-tonesto7)
 
-**```Current SmartApp version: 1.2.1```**
+**```Current SmartApp version: 1.3.0```**
 
 <br>
 
@@ -30,6 +30,8 @@ This is based off of @pdlove homebridge-smartthings
 
 ***v1.2.0*** - Update SmartApp to support new icon.
 
+***v1.3.0*** - The SmartThings and Hubitat Apps now share 99.9% of the same code. With the exception being the hubaction declarations and a static variable defining the platform type
+
 #### Homebridge Plugin:
 
 ***v1.1.5*** - Lot's of new capabilities supported in HomeKit
@@ -43,6 +45,8 @@ This is based off of @pdlove homebridge-smartthings
 ***v1.2.0*** - Added in capability exclusion feature to match @pdlove plugin
 
 ***v1.2.3*** - Minor Cleanups
+
+***v1.3.0*** - The SmartThings and Hubitat NPM package now share 99.9% the same code. All except 2 static variables defining the platform type
 
 
 <br>
