@@ -50,6 +50,10 @@ This is based off of @pdlove homebridge-smartthings
 
 ***v1.3.1*** - Bug fixes from code merge
 
+***v1.3.2*** - More Bug fixes from code merge
+
+***v1.3.3*** - Fixed Detection Issues in plugin
+
 <br>
 
 ## This version is not compatible with prior versions of homebridge-smartthings Smartapp.
