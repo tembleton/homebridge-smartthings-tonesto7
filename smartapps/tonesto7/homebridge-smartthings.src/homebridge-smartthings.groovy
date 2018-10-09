@@ -267,7 +267,7 @@ def getDeviceData(type, sItem) {
             basename:  !isVirtual ? sItem?.name : name,
             deviceid: !isVirtual ? sItem?.id : devId,
             status: !isVirtual ? sItem?.status : "Online",
-            manufacturerName: !isVirtual ? (isST() ? sItem?.getManufacturerName() : sItem?.getDataValue("manufacturer")) : platform(),
+            manufacturerName: (!isVirtual ? (isST() ? sItem?.getManufacturerName() : sItem?.getDataValue("manufacturer")) : platform()) ?: platform(),
             modelName: !isVirtual ? ((isST() ? sItem?.getModelName() : sItem?.getDataValue("model")) ?: sItem?.getTypeName()) : "${curType} Device",
             serialNumber: !isVirtual ? sItem?.getDeviceNetworkId() : "${curType}${devId}",
             firmwareVersion: "1.0.0",
