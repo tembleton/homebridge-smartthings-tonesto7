@@ -1,27 +1,34 @@
+const pluginName = 'homebridge-smartthing';
+const platformName = 'SmartThings';
 var he_st_api = require('./lib/he_st_api');
 var http = require('http');
 var os = require('os');
-const pluginName = 'homebridge-smartthing';
-const platformName = 'SmartThings';
-var Service, Characteristic, Accessory, uuid;
-
-var HE_ST_Accessory;
+var Service, Characteristic, Accessory, uuid, HE_ST_Accessory;
 
 module.exports = function(homebridge) {
+    console.log("Homebridge Version: " + homebridge.version);
+
+    // Service and Characteristic are from hap-nodejs
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
+
+    // Accessory must be created from PlatformAccessory Constructor
     Accessory = homebridge.hap.Accessory;
     uuid = homebridge.hap.uuid;
-    HE_ST_Accessory = require('./accessories/he_st_accessories')(Accessory, Service, Characteristic, uuid);
+    HE_ST_Accessory = require('./accessories/he_st_accessories')(Accessory, Service, Characteristic, uuid, platformName);
+    // For platform plugin to be considered as dynamic platform plugin,
+    // registerPlatform(pluginName, platformName, constructor, dynamic), dynamic must be true
     homebridge.registerPlatform(pluginName, platformName, HE_ST_Platform);
 };
 
+// Platform constructor
+// config may be null
+// api may be null if launched from old homebridge version
 function HE_ST_Platform(log, config) {
     // Load Wink Authentication From Config File
     this.app_url = config['app_url'];
     this.app_id = config['app_id'];
     this.access_token = config['access_token'];
-    this.hub_ip = config["hub_ip"];
     this.excludedCapabilities = config["excluded_capabilities"] || [];
 
     // This is how often it does a full refresh
@@ -47,7 +54,7 @@ function HE_ST_Platform(log, config) {
     }
     this.direct_port = config['direct_port'];
     if (this.direct_port === undefined || this.direct_port === '') {
-        this.direct_port = (platformName === 'Hubitat' ? 8000 : 8005);
+        this.direct_port = (platformName === 'SmartThings' ? 8000 : 8005);
     }
 
     this.direct_ip = config['direct_ip'];
@@ -62,10 +69,35 @@ function HE_ST_Platform(log, config) {
     this.attributeLookup = {};
 }
 
+// HE_ST_Platform.prototype.addAttributeUsage = function(attribute, deviceid, mycharacteristic) {
+//     if (!this.attributeLookup[deviceid])
+//         this.attributeLookup[deviceid] = {};
+//     if (!this.attributeLookup[deviceid][attribute])
+//         this.attributeLookup[deviceid][attribute] = [];
+//     this.attributeLookup[deviceid][attribute].push(mycharacteristic);
+// };
+
+// HE_ST_Platform.prototype.getaddService = function(Accessory, Service) {
+//     var myService = Accessory.getService(Service);
+//     if (!myService) myService = Accessory.addService(Service);
+//     return myService;
+// };
+// HE_ST_Platform.prototype.getaddCharacteristic = function(Accessory, Service, Characteristic) {
+//     var myService = this.getaddService(Accessory, Service);
+//     var myCharacteristic = myService.getCharacteristic(Characteristic);
+//     if (!myCharacteristic) myCharacteristic = myService.addCharacteristic(Characteristic);
+//     return myCharacteristic;
+// };
+
+// Sample function to show how developer can add accessory dynamically from outside event
+// HE_ST_Platform.prototype.addAccessory = function(device) {
+//     this.addAccessoryCharacteristics(this.accessories_configured[device.uuid], device);
+// };
+
 HE_ST_Platform.prototype = {
     reloadData: function(callback) {
         var that = this;
-        that.log('config: ', JSON.stringify(this.config));
+        // that.log('config: ', JSON.stringify(this.config));
         var foundAccessories = [];
         that.log.debug('Refreshing All Device Data');
         he_st_api.getDevices(function(myList) {
@@ -116,12 +148,6 @@ HE_ST_Platform.prototype = {
     accessories: function(callback) {
         this.log('Fetching ' + platformName + ' devices.');
 
-        // IMPORTANT Links:
-        // https://developer.apple.com/documentation/homekit/hmaccessory
-        // https://developer.apple.com/documentation/homekit/hmcharacteristic/characteristic_types
-        // https://developer.apple.com/documentation/homekit/hmcharacteristic/characteristic_values
-        // https://github.com/KhaosT/HAP-NodeJS/blob/master/lib/gen/HomeKitTypes.js
-
         var that = this;
         var foundAccessories = [];
         this.deviceLookup = [];
@@ -140,64 +166,37 @@ HE_ST_Platform.prototype = {
             'Lock',
             'Refresh',
             'Lock Codes',
-            // 'LockCodes',
             'Sensor',
             'Actuator',
             'Configuration',
             'Switch Level',
-            // 'SwitchLevel',
             'Temperature Measurement',
-            // 'TemperatureMeasurement',
             'Motion Sensor',
-            // 'MotionSensor',
             'Color Temperature',
-            // 'ColorTemperature',
             'Illuminance Measurement',
-            // 'IlluminanceMeasurement',
             'Contact Sensor',
-            // 'ContactSensor',
             'Acceleration Sensor',
-            // 'AccelerationSensor',
             'Door Control',
-            // 'DoorControl',
             'Garage Door Control',
-            // 'GarageDoorControl',
             'Relative Humidity Measurement',
-            // 'RelativeHumidityMeasurement',
             'Presence Sensor',
-            // 'PresenceSensor',
             'Carbon Dioxide Measurement',
-            // 'CarbonDioxideMeasurement',
             'Carbon Monoxide Detector',
-            // 'CarbonMonoxideDetector',
-            // 'WaterSensor',
             'Water Sensor',
             'Window Shade',
-            // 'WindowShade',
             'Valve',
             'Energy Meter',
-            // 'EnergyMeter',
             'Power Meter',
-            // 'PowerMeter',
             'Thermostat',
             'Thermostat Cooling Setpoint',
-            // 'ThermostatCoolingSetpoint',
             'Thermostat Mode',
-            // 'ThermostatMode',
             'Thermostat Fan Mode',
-            // 'ThermostatFanMode',
             'Thermostat Operating State',
-            // 'ThermostatOperatingState',
             'Thermostat Heating Setpoint',
-            // 'ThermostatHeatingSetpoint',
             'Thermostat Setpoint',
-            // 'ThermostatSetpoint',
             'Fan Speed',
             'Fan Control',
             'Fan Light',
-            // 'FanSpeed',
-            // 'FanControl',
-            // 'FanLight',
             'Fan',
             'Speaker',
             'Tamper Alert',
@@ -217,7 +216,7 @@ HE_ST_Platform.prototype = {
         }
         this.temperature_unit = 'F';
 
-        he_st_api.init(this.app_url, this.app_id, this.access_token, this.hub_ip);
+        he_st_api.init(this.app_url, this.app_id, this.access_token);
         that.log('update_method: ' + that.update_method);
         this.reloadData(function(foundAccessories) {
             that.log('Unknown Capabilities: ' + JSON.stringify(that.unknownCapabilities));
@@ -311,7 +310,9 @@ function he_st_api_SetupHTTPServer(myHe_st_api) {
 }
 
 function he_st_api_HandleHTTPResponse(request, response, myHe_st_api) {
-    if (request.url === '/initial') myHe_st_api.log(platformName + ' Hub Communication Established');
+    if (request.url === '/initial') {
+        myHe_st_api.log(platformName + ' Hub Communication Established');
+    }
     if (request.url === '/update') {
         let body = [];
         request.on('data', (chunk) => {
