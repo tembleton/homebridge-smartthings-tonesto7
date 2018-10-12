@@ -4,8 +4,8 @@
  *  Copyright 2018 Anthony Santilli
  */
 
-String appVersion() { return "1.3.0" }
-String appModified() { return "10-08-2018" }
+String appVersion() { return "1.4.1" }
+String appModified() { return "10-12-2018" }
 String platform() { return "SmartThings" }
 String appIconUrl() { return "https://raw.githubusercontent.com/tonesto7/homebridge-smartthings-tonesto7/master/images/hb_tonesto7@2x.png" }
 String getAppImg(imgName) { return "https://raw.githubusercontent.com/tonesto7/smartthings-tonesto7-public/master/resources/icons/$imgName" }
@@ -130,8 +130,6 @@ def mainPage() {
                 paragraph "<h3>Selected Device Count:\n${getDeviceCnt()}</h3>"
             }
             section("<br/>${sectionTitleStr("Options:")}") {
-                // paragraph '<h4 style="color: blue;">This Categories will add the necessary capabilities to make sure they are recognized by HomeKit as the specific device type</h4>'
-                input "noTemp", "bool", title: inputTitleStr("Remove Temp from Contacts and Water Sensors?"), description: "<i>Test</i>", required: false, defaultValue: false, submitOnChange: true
                 input "showLogs", "bool", title: inputTitleStr("Show Events in Live Logs?"), required: false, defaultValue: true, submitOnChange: true
                 label title: inputTitleStr("App Label (optional)"), description: "Rename App", defaultValue: app?.name, required: false 
             }
@@ -267,8 +265,8 @@ def getDeviceData(type, sItem) {
             basename:  !isVirtual ? sItem?.name : name,
             deviceid: !isVirtual ? sItem?.id : devId,
             status: !isVirtual ? sItem?.status : "Online",
-            manufacturerName: !isVirtual ? sItem?.getDataValue("manufacturer") : platform(),
-            modelName: !isVirtual ? (sItem?.getDataValue("model") ?: sItem?.getTypeName()) : "${curType} Device",
+            manufacturerName: (!isVirtual ? (isST() ? sItem?.getManufacturerName() : sItem?.getDataValue("manufacturer")) : platform()) ?: platform(),
+            modelName: !isVirtual ? ((isST() ? sItem?.getModelName() : sItem?.getDataValue("model")) ?: sItem?.getTypeName()) : "${curType} Device",
             serialNumber: !isVirtual ? sItem?.getDeviceNetworkId() : "${curType}${devId}",
             firmwareVersion: "1.0.0",
             lastTime: !isVirtual ? (isST() ? sItem?.getLastActivity() : null) : now(),
@@ -287,16 +285,16 @@ def getSecurityDevice() {
     return [
         name: (!isST() ? "Hubitat Safety Monitor Alarm" : "Security Alarm"),
         basename: (!isST() ? "HSM Alarm" : "Security Alarm"),
-        deviceid: (!isST() ? "hsmStatus" : "alarmSystemStatus"),
+        deviceid: "alarmSystemStatus_${location?.id}",
         status: "ACTIVE",
         manufacturerName: platform(),
         modelName: (!isST() ? "Safety Monitor" : "Security System"),
         serialNumber: (!isST() ? "HSM" : "SHM"),
         firmwareVersion: "1.0.0",
         lastTime: null,
-        capabilities: (!isST() ? ["HSMStatus":1, "Alarm":1] : ["Alarm System Status":1, "Alarm":1]), 
+        capabilities: ["Alarm System Status":1, "Alarm":1], 
         commands: [], 
-        attributes: (!isST() ? ["hsmStatus": getSecurityStatus()] : ["alarmSystemStatus": getSecurityStatus()])
+        attributes: ["alarmSystemStatus": getSecurityStatus()]
     ]
 }
 
@@ -343,7 +341,7 @@ def getSecurityStatus(retInt=false) {
             }
         } else { return cur ?: "disarmed" }
     } else {
-        return state?.hsmStatus ?: "disarmed"
+        return location?.hsmStatus ?: "disarmed"
     }
 }
 
@@ -375,13 +373,11 @@ def renderConfig() {
                 platform: platform(),
                 name: platform(),
                 app_url: (isST() ? apiServerUrl("/api/smartapps/installations/") : fullLocalApiServerUrl('')),
+                access_token: state?.accessToken
             ]
         ]
     ]
-    if(isST()) {
-        jsonMap?.platforms["app_id"] = app.id
-        jsonMap?.platforms["access_token"] = state?.accessToken
-    }
+    if(isST()) { jsonMap?.platforms["app_id"] = app.id }
     def configJson = new groovy.json.JsonOutput().toJson(jsonMap)
     def configString = new groovy.json.JsonOutput().prettyPrint(configJson)
     render contentType: "text/plain", data: configString
@@ -395,7 +391,7 @@ def renderLocation() {
         name: location?.name,
         temperature_scale: location?.temperatureScale,
         zip_code: location?.zipCode,
-        hubIP: (isST() ? location.hubs[0]?.getDataValue("localIP") : location?.hubs[0]?.localIP),
+        hubIP: (isST() ? location?.hubs[0]?.localIP : location.hubs[0]?.getDataValue("localIP")),
         app_version: appVersion()
     ]
 }
@@ -409,7 +405,7 @@ def deviceCommand() {
     log.info("Command Request: $params")
     def device = findDevice(params?.id)
     def command = params?.command
-    if(settings?.addSecurityDevice != false && params?.id == "alarmSystemStatus") {
+    if(settings?.addSecurityDevice != false && params?.id == "alarmSystemStatus_${location?.id}") {
         setSecurityMode(command)
         CommandReply("Success", "Security Alarm, Command $command")
     }  else if (settings?.modeList && command == "mode") {
@@ -427,8 +423,8 @@ def deviceCommand() {
             log.error("Device Not Found")
             CommandReply("Failure", "Device Not Found")
         } else if (!device.hasCommand(command)) {
-            log.error("Device "+device.displayName+" does not have the command "+command)
-            CommandReply("Failure", "Device "+device.displayName+" does not have the command "+command)
+            log.error("Device ${device.displayName} does not have the command $command")
+            CommandReply("Failure", "Device ${device.displayName} does not have the command $command")
         } else {
             def value1 = request.JSON?.value1
             def value2 = request.JSON?.value2
@@ -653,30 +649,24 @@ def changeHandler(evt) {
 
     switch(evt?.name) {
         case "hsmStatus":
-            deviceid = evt?.name
-            state?.hsmStatus = value
+            deviceid = "alarmSystemStatus_${location?.id}"
+            attr = "alarmSystemStatus"
             sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: value, evtUnit: evt?.unit ?: "", evtDate: dt])
             break
         case "hsmAlert":
             if(evt?.value == "intrusion") {
-                deviceid = evt?.name
-                state?.hsmStatus = "alarm_active"
+                deviceid = "alarmSystemStatus_${location?.id}"
+                attr = "alarmSystemStatus"
                 value = "alarm_active"
                 sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: value, evtUnit: evt?.unit ?: "", evtDate: dt])
             } else { sendEvt = false }
-            state?.hsmAlert = evt?.value
             break
         case "hsmRules":
-            state?.hsmRules = evt?.value
-            sendEvt = false
-            break
         case "hsmSetArm":
-            state?.hsmSetArm = evt?.value
             sendEvt = false
             break
         case "alarmSystemStatus":
-            deviceid = evt?.name
-            state?.alarmSystemStatus = value
+            deviceid = "alarmSystemStatus_${location?.id}"
             sendItems?.push([evtSource: src, evtDeviceName: deviceName, evtDeviceId: deviceid, evtAttr: attr, evtValue: value, evtUnit: evt?.unit ?: "", evtDate: dt])
             break
         case "mode":
@@ -777,7 +767,7 @@ def enableDirectUpdates() {
 }
 
 mappings {
-    if (!params?.access_token || (params?.access_token && params?.access_token != state?.accessToken)) {
+    if (isST() && (!params?.access_token || (params?.access_token && params?.access_token != state?.accessToken))) {
         path("/devices")					{ action: [GET: "authError"] }
         path("/config")						{ action: [GET: "authError"] }
         path("/location")					{ action: [GET: "authError"] }
