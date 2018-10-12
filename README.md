@@ -34,6 +34,8 @@ This is based off of @pdlove homebridge-smartthings
 
 ***v1.4.0*** - Add support for multiple HSM locations, and other Bugfixes mainly related to Hubitat Side
 
+***v1.4.1*** - SHM/HSM fixes and added support for triggering intrusion alerts under HomeKit
+
 #### Homebridge Plugin:
 
 ***v1.1.5*** - Lot's of new capabilities supported in HomeKit
@@ -59,6 +61,7 @@ This is based off of @pdlove homebridge-smartthings
 ***v1.4.0*** - Fixed Hubitat support, working windows shades, allow multiple location SHM/HSM instances, lot's of cleanups and restructures.
 ***v1.4.0*** - Warning:  This will recreate a new Alarm device under Homekit.  There is a possiblity it might also reset all of your Homekit Devices, rooms and options
 
+***v1.4.1*** - SHM/HSM fixes and added support for triggering intrusion alerts under HomeKit
 <br>
 
 ## This version is not compatible with prior versions of homebridge-smartthings Smartapp.
