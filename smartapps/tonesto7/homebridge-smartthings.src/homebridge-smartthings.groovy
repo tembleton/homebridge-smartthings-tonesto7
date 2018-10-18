@@ -5,7 +5,7 @@
  */
 
 String appVersion() { return "1.5.0" }
-String appModified() { return "10-12-2018" }
+String appModified() { return "10-18-2018" }
 String platform() { return "SmartThings" }
 String appIconUrl() { return "https://raw.githubusercontent.com/tonesto7/homebridge-smartthings-tonesto7/master/images/hb_tonesto7@2x.png" }
 String getAppImg(imgName) { return "https://raw.githubusercontent.com/tonesto7/smartthings-tonesto7-public/master/resources/icons/$imgName" }
