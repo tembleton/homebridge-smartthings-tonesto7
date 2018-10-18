@@ -4,7 +4,7 @@ This is based off of @pdlove homebridge-smartthings
 
 [![npm version](https://badge.fury.io/js/homebridge-smartthings-tonesto7.svg)](https://badge.fury.io/js/homebridge-smartthings-tonesto7)
 
-**```Current SmartApp version: 1.4.0```**
+**```Current SmartApp version: 1.5.0```**
 
 <br>
 
@@ -36,6 +36,12 @@ This is based off of @pdlove homebridge-smartthings
 
 ***v1.4.1*** - SHM/HSM fixes and added support for triggering intrusion alerts under HomeKit
 
+***v1.5.0*** - Added support for the service to send commands directly to the hub locally (SmartThings ONLY)
+***v1.5.0*** - Added toggle to control whether local commands are allowed
+***v1.5.0*** - Added ability to trigger service restart when you exit the app (Will only restart on it's own if using process/service manager like PM2/systemd)
+
+
+
 #### Homebridge Plugin:
 
 ***v1.1.5*** - Lot's of new capabilities supported in HomeKit
@@ -62,6 +68,11 @@ This is based off of @pdlove homebridge-smartthings
 ***v1.4.0*** - Warning:  This will recreate a new Alarm device under Homekit.  There is a possiblity it might also reset all of your Homekit Devices, rooms and options
 
 ***v1.4.1*** - SHM/HSM fixes and added support for triggering intrusion alerts under HomeKit
+
+***v1.5.0*** - Added support for the service to send commands directly to the hub locally (SmartThings ONLY)
+***v1.5.0*** - Added toggle to control whether local commands are allowed
+***v1.5.0*** - Added ability to trigger service restart when you exit the app (Will only restart on it's own if using process/service manager like PM2/systemd)
+
 <br>
 
 ## This version is not compatible with prior versions of homebridge-smartthings Smartapp.
@@ -88,6 +99,9 @@ Installation comes in two parts:
 ## 1. SmartApp Installation
 
 * Log into your SmartThings account at [SmartThings IDE](https://account.smartthings.com/login)
+
+_Note New SmartThings users: You must first enable github integration. (If you use github for work you will probably want to set up a new account as it will request access to your private repos). Only after enabling integration will you see the settings button_
+
 * Click on <u><b>```My SmartApps```</b></u>
 * Click on Settings and Add the New repository:
    * Owner: <u>```tonesto7```</u>
@@ -147,7 +161,6 @@ Installation comes in two parts:
    <span style="color: #f92672">&quot;app_url&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;https://graph.api.smartthings.com:443/api/smartapps/installations/&quot;</span><span style="color: #f8f8f2">,</span>
    <span style="color: #f92672">&quot;app_id&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;YOUR_APPS_ID&quot;</span><span style="color: #f8f8f2">,</span>
    <span style="color: #f92672">&quot;access_token&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;THIS-SHOULD-BE-YOUR-TOKEN&quot;</span><span style="color: #f8f8f2">,</span>
-   <span style="color: #f92672">&quot;polling_seconds&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;3600&quot;</span><span style="color: #f8f8f2">,</span>
    <span style="color: #f92672">&quot;update_method&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;direct&quot;</span><span style="color: #f8f8f2">,</span>
    <span style="color: #f92672">&quot;direct_ip&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #e6db74">&quot;10.0.0.70&quot;</span><span style="color: #f8f8f2">,</span>
    <span style="color: #f92672">&quot;direct_port&quot;</span><span style="color: #f8f8f2">:</span> <span style="color: #ae81ff">8000</span><span style="color: #f8f8f2">,</span>
@@ -171,6 +184,9 @@ Installation comes in two parts:
 
  * <p><u>direct_port</u>  <small style="color: #f92672; font-weight: 600;"><i>Optional</i></small><br>
    Defaults to 8000<br><small style="color: gray;">This is the port that homebridge-smartthings plugin will listen on for traffic from your hub. Make sure your firewall allows incoming traffic on this port from your hub's IP address.</small></p>
+
+ * <p><u>local_commands</u>  <small style="color: #f92672; font-weight: 600;"><i>Optional</i></small><br>
+    This will allow the service to send homekit commands to hub locally (SmartThings only)</p>
 
  * <p><u>excluded_capabilities</u>  <small style="color: #f92672; font-weight: 600;"><i>Optional</i></small><br>
    Defaults to None<br><small style="color: gray;">Specify the SmartThings device by ID and the associated capabilities you want homebridge-smartthings to ignore<br>This prevents a SmartThings device creating unwanted or redundant HomeKit accessories</small></p>

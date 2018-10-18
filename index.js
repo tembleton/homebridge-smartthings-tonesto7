@@ -3,7 +3,11 @@ const platformName = 'SmartThings';
 var he_st_api = require('./lib/he_st_api');
 var http = require('http');
 var os = require('os');
-var Service, Characteristic, Accessory, uuid, HE_ST_Accessory;
+var Service,
+    Characteristic,
+    Accessory,
+    uuid,
+    HE_ST_Accessory;
 
 module.exports = function(homebridge) {
     console.log("Homebridge Version: " + homebridge.version);
@@ -26,6 +30,8 @@ module.exports = function(homebridge) {
 // api may be null if launched from old homebridge version
 function HE_ST_Platform(log, config) {
     // Load Wink Authentication From Config File
+    this.temperature_unit = 'F';
+
     this.app_url = config['app_url'];
     this.app_id = config['app_id'];
     this.access_token = config['access_token'];
@@ -43,6 +49,9 @@ function HE_ST_Platform(log, config) {
     if (!this.update_method) {
         this.update_method = 'direct';
     }
+
+    this.local_commands = false;
+    this.local_hub_ip = undefined;
 
     this.update_seconds = config['update_seconds'];
     // 30 seconds is the new default
@@ -131,8 +140,11 @@ HE_ST_Platform.prototype = {
                 };
                 if (myList && myList.location) {
                     that.temperature_unit = myList.location.temperature_scale;
+                    if (myList.location.hubIP) {
+                        that.local_hub_ip = myList.location.hubIP;
+                        he_st_api.updateGlobals(that.local_hub_ip, that.local_commands);
+                    }
                 }
-
                 populateDevices(myList.deviceList);
             } else if (!myList || !myList.error) {
                 that.log('Invalid Response from API call');
@@ -149,7 +161,7 @@ HE_ST_Platform.prototype = {
         this.log('Fetching ' + platformName + ' devices.');
 
         var that = this;
-        var foundAccessories = [];
+        // var foundAccessories = [];
         this.deviceLookup = [];
         this.unknownCapabilities = [];
         this.knownCapabilities = [
@@ -158,7 +170,6 @@ HE_ST_Platform.prototype = {
             'LightBulb',
             'Bulb',
             'Color Control',
-            // 'ColorControl',
             'Door',
             'Window',
             'Battery',
@@ -214,13 +225,12 @@ HE_ST_Platform.prototype = {
             }
             this.knownCapabilities = newList;
         }
-        this.temperature_unit = 'F';
 
-        he_st_api.init(this.app_url, this.app_id, this.access_token);
-        that.log('update_method: ' + that.update_method);
+        he_st_api.init(this.app_url, this.app_id, this.access_token, this.local_hub_ip, this.local_commands);
         this.reloadData(function(foundAccessories) {
             that.log('Unknown Capabilities: ' + JSON.stringify(that.unknownCapabilities));
             callback(foundAccessories);
+            that.log('update_method: ' + that.update_method);
             setInterval(that.reloadData.bind(that), that.polling_seconds * 1000);
             // Initialize Update Mechanism for realtime-ish updates.
             if (that.update_method === 'api') {
@@ -310,6 +320,39 @@ function he_st_api_SetupHTTPServer(myHe_st_api) {
 }
 
 function he_st_api_HandleHTTPResponse(request, response, myHe_st_api) {
+    if (request.url === '/restart') {
+        let delay = (10 * 1000);
+        myHe_st_api.log('Received request from ' + platformName + ' to restart homebridge service in (' + (delay / 1000) + ' seconds) | NOTICE: If you using PM2 or Systemd the Homebridge Service should start back up');
+        setTimeout(function() {
+            process.exit(1);
+        }, parseInt(delay));
+    }
+    if (request.url === '/updateprefs') {
+        myHe_st_api.log(platformName + ' Hub Sent Preference Updates');
+        let body = [];
+        request.on('data', (chunk) => {
+            body.push(chunk);
+        }).on('end', () => {
+            body = Buffer.concat(body).toString();
+            let data = JSON.parse(body);
+            let sendUpd = false;
+            if (platformName === 'SmartThings') {
+                if (data.local_commands && myHe_st_api.local_commands !== data.local_commands) {
+                    sendUpd = true;
+                    myHe_st_api.log(platformName + ' Updated Local Commands Preference | Before: ' + myHe_st_api.local_commands + ' | Now: ' + data.local_commands);
+                    myHe_st_api.local_commands = data.local_commands;
+                }
+                if (data.local_hub_ip && myHe_st_api.local_hub_ip !== data.local_hub_ip) {
+                    sendUpd = true;
+                    myHe_st_api.log(platformName + ' Updated Hub IP Preference | Before: ' + myHe_st_api.local_hub_ip + ' | Now: ' + data.local_hub_ip);
+                    myHe_st_api.local_hub_ip = data.local_hub_ip;
+                }
+            }
+            if (sendUpd) {
+                he_st_api.updateGlobals(myHe_st_api.local_hub_ip, myHe_st_api.local_commands);
+            }
+        });
+    }
     if (request.url === '/initial') {
         myHe_st_api.log(platformName + ' Hub Communication Established');
     }
