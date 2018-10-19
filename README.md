@@ -4,7 +4,7 @@ This is based off of @pdlove homebridge-smartthings
 
 [![npm version](https://badge.fury.io/js/homebridge-smartthings-tonesto7.svg)](https://badge.fury.io/js/homebridge-smartthings-tonesto7)
 
-**```Current SmartApp version: 1.5.0```**
+**```Current SmartApp version: 1.5.1```**
 
 <br>
 
@@ -37,10 +37,10 @@ This is based off of @pdlove homebridge-smartthings
 ***v1.4.1*** - SHM/HSM fixes and added support for triggering intrusion alerts under HomeKit
 
 ***v1.5.0*** - Added support for the service to send commands directly to the hub locally (SmartThings ONLY)
-***v1.5.0*** - Added toggle to control whether local commands are allowed
+***v1.5.0*** - Added toggle to control whether local commands are allowed (SmartThings ONLY)
 ***v1.5.0*** - Added ability to trigger service restart when you exit the app (Will only restart on it's own if using process/service manager like PM2/systemd)
 
-
+***v1.5.1*** - Bug fixes
 
 #### Homebridge Plugin:
 
@@ -70,8 +70,10 @@ This is based off of @pdlove homebridge-smartthings
 ***v1.4.1*** - SHM/HSM fixes and added support for triggering intrusion alerts under HomeKit
 
 ***v1.5.0*** - Added support for the service to send commands directly to the hub locally (SmartThings ONLY)
-***v1.5.0*** - Added toggle to control whether local commands are allowed
+***v1.5.0*** - Added toggle to control whether local commands are allowed (SmartThings ONLY)
 ***v1.5.0*** - Added ability to trigger service restart when you exit the app (Will only restart on it's own if using process/service manager like PM2/systemd)
+
+***v1.5.1*** - Bug fixes
 
 <br>
 

@@ -4,7 +4,7 @@
  *  Copyright 2018 Anthony Santilli
  */
 
-String appVersion() { return "1.5.0" }
+String appVersion() { return "1.5.1" }
 String appModified() { return "10-19-2018" }
 String platform() { return "SmartThings" }
 String appIconUrl() { return "https://raw.githubusercontent.com/tonesto7/homebridge-smartthings-tonesto7/master/images/hb_tonesto7@2x.png" }

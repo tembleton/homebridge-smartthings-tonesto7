@@ -11,23 +11,15 @@ var Service,
 
 module.exports = function(homebridge) {
     console.log("Homebridge Version: " + homebridge.version);
-
-    // Service and Characteristic are from hap-nodejs
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
 
-    // Accessory must be created from PlatformAccessory Constructor
     Accessory = homebridge.hap.Accessory;
     uuid = homebridge.hap.uuid;
     HE_ST_Accessory = require('./accessories/he_st_accessories')(Accessory, Service, Characteristic, uuid, platformName);
-    // For platform plugin to be considered as dynamic platform plugin,
-    // registerPlatform(pluginName, platformName, constructor, dynamic), dynamic must be true
     homebridge.registerPlatform(pluginName, platformName, HE_ST_Platform);
 };
 
-// Platform constructor
-// config may be null
-// api may be null if launched from old homebridge version
 function HE_ST_Platform(log, config) {
     // Load Wink Authentication From Config File
     this.temperature_unit = 'F';
@@ -77,31 +69,6 @@ function HE_ST_Platform(log, config) {
     this.firstpoll = true;
     this.attributeLookup = {};
 }
-
-// HE_ST_Platform.prototype.addAttributeUsage = function(attribute, deviceid, mycharacteristic) {
-//     if (!this.attributeLookup[deviceid])
-//         this.attributeLookup[deviceid] = {};
-//     if (!this.attributeLookup[deviceid][attribute])
-//         this.attributeLookup[deviceid][attribute] = [];
-//     this.attributeLookup[deviceid][attribute].push(mycharacteristic);
-// };
-
-// HE_ST_Platform.prototype.getaddService = function(Accessory, Service) {
-//     var myService = Accessory.getService(Service);
-//     if (!myService) myService = Accessory.addService(Service);
-//     return myService;
-// };
-// HE_ST_Platform.prototype.getaddCharacteristic = function(Accessory, Service, Characteristic) {
-//     var myService = this.getaddService(Accessory, Service);
-//     var myCharacteristic = myService.getCharacteristic(Characteristic);
-//     if (!myCharacteristic) myCharacteristic = myService.addCharacteristic(Characteristic);
-//     return myCharacteristic;
-// };
-
-// Sample function to show how developer can add accessory dynamically from outside event
-// HE_ST_Platform.prototype.addAccessory = function(device) {
-//     this.addAccessoryCharacteristics(this.accessories_configured[device.uuid], device);
-// };
 
 HE_ST_Platform.prototype = {
     reloadData: function(callback) {
