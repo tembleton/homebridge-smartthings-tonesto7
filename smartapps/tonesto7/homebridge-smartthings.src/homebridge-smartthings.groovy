@@ -406,7 +406,7 @@ def renderConfig() {
             ]
         ]
     ]
-    if(isST()) { jsonMap?.platforms["app_id"] = app.id }
+    if(isST()) { jsonMap?.platforms[0]["app_id"] = app.id }
     def configJson = new groovy.json.JsonOutput().toJson(jsonMap)
     def configString = new groovy.json.JsonOutput().prettyPrint(configJson)
     render contentType: "text/plain", data: configString
